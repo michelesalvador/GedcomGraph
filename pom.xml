@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>graph.gedcom</groupId>
   <artifactId>gedcom-graph</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <packaging>jar</packaging>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -20,25 +20,6 @@
 			</archive>
         </configuration>
       </plugin>
-      <!--  <plugin>
-	      <artifactId>maven-assembly-plugin</artifactId>
-	      <version>3.2.0</version>
-	      <configuration>
-	        <source>1.8</source>
-          	<target>1.8</target>
-	        <descriptorRefs>
-	          <descriptorRef>jar-with-dependencies</descriptorRef>
-	        </descriptorRefs>
-	      </configuration>
-	      <executions>
-          <execution>
-          	<phase>package</phase>
-            <goals>
-              <goal>single</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin> -->
     </plugins>
   </build>
   <dependencies>

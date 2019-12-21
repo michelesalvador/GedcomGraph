@@ -6,14 +6,8 @@ public final class Single extends Node {
 	
 	public Card one;
 	
-	public Single(Class<? extends Card> genericCard, Person one) {
-		this.genericCard = genericCard;
-		//this.one = new Card(one);
-		try {
-			this.one = genericCard.getDeclaredConstructor(Person.class).newInstance(one);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	public Single(Person one) {
+		this.one = new Card(one);
 	}
 
 	@Override
@@ -23,12 +17,14 @@ public final class Single extends Node {
 	
 	@Override
 	public Card getCard(int branch) {
-		if(branch == 0)
-			return one;
-		return null;
+		return one;
 	}
 	
-	int centerX() {
+	public int centerX() {
 		return one.x + one.width/2;
+	}
+	
+	public int centerXrel() {
+		return one.width / 2;
 	}
 }

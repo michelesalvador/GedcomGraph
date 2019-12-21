@@ -7,20 +7,18 @@ public abstract class Node {
 	public int x, y, width, height;
 	Group husbandGroup; // The group to which the husband of this node belongs as child
 	Group wifeGroup; // The group to which the wife of this node belongs as child
-	Group guardGroup; // The group to which this node belongs as guardian
-	int[] descendants;
-	Class<? extends Card> genericCard;
+	public Group guardGroup; // The group to which this node belongs as guardian
 
 	/**
 	 * Retrieve the {#Card} of the blood relative (that is, not the spouse).
 	 * 
 	 * @return A Card
 	 */
-	abstract Card getMainCard();
+	public abstract Card getMainCard();
 	
 	/**
 	 * 
-	 * @param branch 1 for the husband e 2 for the wife
+	 * @param branch 1 for the husband, 2 for the wife
 	 * @return
 	 */
 	abstract Card getCard(int branch);
@@ -33,26 +31,16 @@ public abstract class Node {
 		return this instanceof Couple;
 	}
 	
-	abstract int centerX();
+	public abstract int centerX();
+	
+	public int centerY() {
+		return y + height / 2;
+	}
 
-	// centrare gli youths a partire dai guardian
-	/*@Deprecated
-	void setX(int moveX) {
-		if( this.equals(group.getYouth(0)) )
-			this.x = group.getGuardian().centerX() - group.getArcWidth()/2 - this.width / 2;  // <---- Sbagliato
-		else
-			this.x = moveX;
-	}*/
-
-	boolean identical(Node other) {
-		if (isCouple() && other.isCouple()
-				&& ((Couple) this).husband.getPerson().equals(((Couple) other).husband.getPerson())
-				&& ((Couple) this).wife.getPerson().equals(((Couple) other).wife.getPerson())
-				&& ((Couple) this).marriage.equals(((Couple) other).marriage))
-			return true;
-		if (isSingle() && other.isSingle() && ((Single) this).one.getPerson().equals(((Single) other).one.getPerson()))
-			return true;
-		return false;
+	public abstract int centerXrel();
+	
+	public int centerYrel() {
+		return height / 2;
 	}
 
 	Person getPerson(int branch) {
@@ -70,7 +58,7 @@ public abstract class Node {
 	@Override
 	public String toString() {
 		String str = "";
-		str += this.hashCode() + "\t";
+		//str += this.hashCode() + "\t";
 		if (isCouple()) {
 			str += ((Couple) this).husband.toString() + " - " + ((Couple) this).wife.toString();
 		} else if (isSingle())

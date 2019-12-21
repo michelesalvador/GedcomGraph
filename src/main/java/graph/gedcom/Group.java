@@ -3,20 +3,10 @@ package graph.gedcom;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.folg.gedcom.model.Family;
-import org.folg.gedcom.model.Person;
-
-/**
- * Similar to a {@link #org.folg.gedcom.model.Family} but better.
- */
-
 public class Group {
 
-	private Node guardian; // Is null if there isn't any parent
-	private List<Node> youths;
-	//int x;
-	//int y;
-	Group preceding; // The group of ancestors
+	private Node guardian; // Node of parent(s), is null if there isn't any parent
+	private List<Node> youths; // Children with their spouses
 
 	public Group() {
 		this.guardian = null;
@@ -64,7 +54,7 @@ public class Group {
 	}
 	
 	public String toString() {
-		String str = "";
+		String str = "...";
 		if( guardian != null )
 			str = guardian.toString();
 		for (Node young : youths) {

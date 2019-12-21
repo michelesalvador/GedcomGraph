@@ -7,7 +7,6 @@ public class Line {
 	public Line( Card end ) {
 		if(end != null) {
 			Node start = end.getOrigin();
-			// this.end = end;
 			if( start != null ) {
 				if(start.isCouple()) {
 					x1 = ((Couple)start).centerX();

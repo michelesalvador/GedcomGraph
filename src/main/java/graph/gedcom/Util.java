@@ -5,9 +5,9 @@ import org.folg.gedcom.model.Person;
 
 public class Util {
 	
-	public static int PADDING = 20; // Horizontal space between nodes
-	public static int MARGIN = 20; // Space between husband and wife
-	public static int SPACE = 40; // Vertical space between rows of cards
+	public static int PADDING = 15; // Horizontal space between nodes
+	public static int MARGIN = 15; // Space between husband and wife
+	public static int SPACE = 50; // Vertical space between rows of cards
 
 	/**
 	 * Utility to know the sex of a {#Person}.
@@ -66,12 +66,11 @@ public class Util {
 		return false;
 	}
 	
-	@Deprecated
-	public static void p(Object str) {
-		System.out.println(str);
-	}
-	
-	public static void print(Object str) {
+	// Prints everything to the console
+	public static void pr(Object... objects) {
+		String str = "";
+		for(Object obj : objects) 
+			str += obj + " ";
 		System.out.println(str);
 	}
 }

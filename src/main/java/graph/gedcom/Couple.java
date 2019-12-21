@@ -2,6 +2,8 @@ package graph.gedcom;
 
 import java.util.HashSet;
 import java.util.Set;
+
+import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Person;
 
@@ -10,22 +12,17 @@ public final class Couple extends Node {
 	public Card husband;
 	public Card wife;
 	int target;
-	public String marriage;
+	public String marriageDate;
 	
-	public Couple(Class<? extends Card> genericCard, Person husband, Person wife, Family family, int target) {
-		this.genericCard = genericCard;
-		//this.husband = new Card(husband);
-		//this.wife = new Card(wife);
-		//Util.p("genericCard "+genericCard);
-		try {
-			this.husband = genericCard.getDeclaredConstructor(Person.class).newInstance(husband);
-			this.wife = genericCard.getDeclaredConstructor(Person.class).newInstance(wife);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		//if(family.getEventsFacts().get(0)) // TODO Get marriage
-		marriage = "1971";
+	public Couple(Person husband, Person wife, Family family, int target) {
+		this.husband = new Card(husband);
+		this.wife = new Card(wife);
 		this.target = target;
+		// Gedcom date of the marriage
+		for( EventFact ef : family.getEventsFacts() ) {
+			if( ef.getTag().equals("MARR") )
+				marriageDate = ef.getDate();
+		}
 	}
 
 	@Override
@@ -54,7 +51,19 @@ public final class Couple extends Node {
 		return x + husband.width + Util.MARGIN / 2;
 	}
 	
-	public int centerY() {
-		return y + height / 2;
+	public int centerXrel() {
+		return husband.width + Util.MARGIN / 2;
+	}
+	
+	// Simple solution to retrieve the marriage year. Family Gem uses another much more complex.
+	public String marriageYear() {
+		String year = "";
+		if (marriageDate != null) {
+			if(marriageDate.lastIndexOf(' ') > 0)
+				year = marriageDate.substring(marriageDate.lastIndexOf(' '));
+			else
+				year = marriageDate;
+		}
+		return year	;
 	}
 }

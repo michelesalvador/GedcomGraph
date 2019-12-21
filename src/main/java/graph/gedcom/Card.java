@@ -2,26 +2,23 @@ package graph.gedcom;
 
 import org.folg.gedcom.model.Person;
 
-public abstract class Card { //  extends CardInterface
+public class Card {
 
+	public int x, y, width, height;
 	private Person person;
+	public boolean dead;
 	private Node origin; // The node of parent(s) from which this person was born
-	public int x=0, y, width, height = 0;
-	int[] ancestors;
 
 	public Card( Person person) {
 		this.person = person;
+		if(Util.dead(person)) {
+			dead = true;
+		}
 	}
-	
-	//public abstract OnCreate(Person p) {}
 	
 	int centerX() {
 		return x + width / 2;
 	}
-	
-	/*public void setPerson (Person person) {
-		this.person = person;
-	}*/
 
 	public Person getPerson() {
 		return person;
