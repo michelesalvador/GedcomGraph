@@ -8,9 +8,10 @@ public class Util {
 	public static int PADDING = 15; // Horizontal space between nodes
 	public static int MARGIN = 15; // Space between husband and wife
 	public static int SPACE = 50; // Vertical space between rows of cards
+	public static int GAP = 10; // Horizontal space between ancestors
 
 	/**
-	 * Utility to know the sex of a {#Person}.
+	 * Utility to know the sex of a person.
 	 * 
 	 * @param person The person whose sex we want to know
 	 * @return int 0 no sex, 1 male, 2 female, 3 undefined, 4 other
@@ -38,7 +39,7 @@ public class Util {
 	}
 
 	/**
-	 * The very basic about a {#Person}.
+	 * The very basic about a person.
 	 * 
 	 * @param person
 	 * @return String

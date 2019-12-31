@@ -8,13 +8,8 @@ public class Line {
 		if(end != null) {
 			Node start = end.getOrigin();
 			if( start != null ) {
-				if(start.isCouple()) {
-					x1 = ((Couple)start).centerX();
-					y1 = start.y + ((Couple)start).height;
-				} else {
-					x1 = start.x + ((Single)start).one.width / 2;
-					y1 = start.y + ((Single)start).one.height;
-				}
+				x1 = start.centerX();
+				y1 = start.y + start.height;
 				x2 = end.centerX();
 				y2 = end.y;
 			} else {

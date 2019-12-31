@@ -5,8 +5,10 @@ import org.folg.gedcom.model.Person;
 public class Card {
 
 	public int x, y, width, height;
-	private Person person;
 	public boolean dead;
+	public boolean acquired; // Is acquired or blood relative?
+	public AncestryNode ancestryNode;
+	private Person person;
 	private Node origin; // The node of parent(s) from which this person was born
 
 	public Card( Person person) {
@@ -16,7 +18,7 @@ public class Card {
 		}
 	}
 	
-	int centerX() {
+	public int centerX() {
 		return x + width / 2;
 	}
 
