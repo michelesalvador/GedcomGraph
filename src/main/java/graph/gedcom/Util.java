@@ -5,10 +5,10 @@ import org.folg.gedcom.model.Person;
 
 public class Util {
 	
-	public static int PADDING = 15; // Horizontal space between nodes
-	public static int MARGIN = 15; // Space between husband and wife
-	public static int SPACE = 50; // Vertical space between rows of cards
-	public static int GAP = 10; // Horizontal space between ancestors
+	public static int PADDING = 30; // Horizontal space between nodes
+	public static int MARGIN = 30; // Space between husband and wife
+	public static int SPACE = 100; // Vertical space between rows of cards
+	public static int GAP = 20; // Horizontal space between ancestors
 
 	/**
 	 * Utility to know the sex of a person.

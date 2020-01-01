@@ -12,6 +12,7 @@ import static graph.gedcom.Util.pr;
 
 public class Graph {
 
+	public int width, height;
 	private Gedcom gedcom;
 	private int whichFamily; // Which family display if the fulcrum is child in more than one family
 	private int ancestorGenerations; // Generations to display
@@ -21,7 +22,7 @@ public class Graph {
 	private Set<Ancestor> ancestors;
 	private Set<Line> lines;
 	CardNode fulcrumNode;
-	Group baseGroup; // In which fulcrumNode is one of the children (youth)
+	Group baseGroup; // In which fulcrum is one of the children (youth)
 
 	public Graph(Gedcom gedcom) {
 		this.gedcom = gedcom;
@@ -53,67 +54,85 @@ public class Graph {
 		return this;
 	}
 
-	public void startFrom(String id) {
-		Person fulcrum = gedcom.getPerson(id);
-		if (fulcrum != null) {
-			fulcrumNode = new SpouseNode(gedcom, fulcrum);
-			nodeRows.add(new ArrayList<Node>());
+	/**
+	 * Start the diagram of the first person it can find with the provided ids.
+	 * @param ids One or more id to search the person that become the diagram fulcrum
+	 * @return True if everything is ok, false if doesn't find a fulcrum
+	 */
+	public boolean startFrom(String... ids) {
+		
+		// Reset all values
+		baseGroup = null;
+		nodeRows.clear();
+		nodes.clear();
+		cards.clear();
+		ancestors.clear();
+		lines.clear();
+		width = 0;
+		height = 0;
+		
+		Person fulcrum = null;
+		for (String id : ids) {
+			fulcrum = gedcom.getPerson(id);
+			if (fulcrum != null)
+				break;
+		}
+		if (fulcrum == null)
+			return false;
+		fulcrumNode = new SpouseNode(gedcom, fulcrum);
+		nodeRows.add(new ArrayList<Node>());
 
-			// Create nodes for ancestors
-			if (!fulcrum.getParentFamilies(gedcom).isEmpty()) {
-				Family parentFamily = fulcrum.getParentFamilies(gedcom).get(whichFamily);
-				baseGroup = new Group(); // In which the fulcrum is child
-				CardNode parentNode = null;
-				if (ancestorGenerations > 0)
-					parentNode = new ParentNode(gedcom, parentFamily);
-				fulcrumNode.getMainCard().setOrigin(parentNode);
-				baseGroup.setGuardian(parentNode);
-				parentNode.guardGroup = baseGroup;
-				for (Person sibling : parentFamily.getChildren(gedcom)) {
-					if (sibling.equals(fulcrum)) {
-						baseGroup.addYoung(fulcrumNode, false);
-						nodeRows.get(0).add(fulcrumNode);
-					} else {
-						CardNode siblingNode = new SpouseNode(gedcom, sibling);
-						baseGroup.addYoung(siblingNode, false);
-						siblingNode.getMainCard().setOrigin(parentNode);
-						nodeRows.get(0).add(siblingNode);
-					}
+		// Create nodes for ancestors
+		if (!fulcrum.getParentFamilies(gedcom).isEmpty()) {
+			Family parentFamily = fulcrum.getParentFamilies(gedcom).get(whichFamily);
+			baseGroup = new Group(); // In which the fulcrum is child
+			CardNode parentNode = null;
+			if (ancestorGenerations > 0)
+				parentNode = new ParentNode(gedcom, parentFamily);
+			fulcrumNode.getMainCard().setOrigin(parentNode);
+			baseGroup.setGuardian(parentNode);
+			parentNode.guardGroup = baseGroup;
+			for (Person sibling : parentFamily.getChildren(gedcom)) {
+				if (sibling.equals(fulcrum)) {
+					baseGroup.addYoung(fulcrumNode, false);
+					nodeRows.get(0).add(fulcrumNode);
+				} else {
+					CardNode siblingNode = new SpouseNode(gedcom, sibling);
+					baseGroup.addYoung(siblingNode, false);
+					siblingNode.getMainCard().setOrigin(parentNode);
+					nodeRows.get(0).add(siblingNode);
 				}
-				// Recoursive call
-				if (!parentFamily.getHusbands(gedcom).isEmpty())
-					findAncestors(baseGroup, 1, 1);
-				if (!parentFamily.getWives(gedcom).isEmpty())
-					findAncestors(baseGroup, 2, 1);
-				// Fulcrum has parent family but without parents
-				if (parentFamily.getHusbands(gedcom).isEmpty() && parentFamily.getWives(gedcom).isEmpty()) {
-					nodeRows.add(0, new ArrayList<Node>());
-					nodeRows.get(0).add(parentNode);
-				}
-			} else {
-				// Fulcrum without parent family
-				nodeRows.get(0).add(fulcrumNode);
 			}
-
-			// Create nodes for descendants
-			if (!fulcrum.getSpouseFamilies(gedcom).isEmpty()) {
-				Family spouseFamily = fulcrum.getSpouseFamilies(gedcom).get(0); // TODO loop for multiple marriages
-				Group spouseGroup = new Group(); // In which the fulcrum is the parent
-				spouseGroup.setGuardian(fulcrumNode);
-				fulcrumNode.guardGroup = spouseGroup;
-				int rowNum = nodeRows.size();
-				nodeRows.add(new ArrayList<Node>());
-				for (Person child : spouseFamily.getChildren(gedcom)) {
-					CardNode childNode = new SpouseNode(gedcom, child);
-					spouseGroup.addYoung(childNode, false);
-					childNode.getMainCard().setOrigin(fulcrumNode);
-					nodeRows.get(rowNum).add(childNode);
-					findDescendants(childNode, rowNum);
-				}
+			// Recoursive call
+			if (!parentFamily.getHusbands(gedcom).isEmpty())
+				findAncestors(baseGroup, 1, 1);
+			if (!parentFamily.getWives(gedcom).isEmpty())
+				findAncestors(baseGroup, 2, 1);
+			// Fulcrum has parent family but without parents
+			if (parentFamily.getHusbands(gedcom).isEmpty() && parentFamily.getWives(gedcom).isEmpty()) {
+				nodeRows.add(0, new ArrayList<Node>());
+				nodeRows.get(0).add(parentNode);
 			}
 		} else {
-			pr("Person " + id + " doesn't exist.");
-			return;
+			// Fulcrum without parent family
+			nodeRows.get(0).add(fulcrumNode);
+		}
+
+		// Create nodes for descendants
+		if (!fulcrum.getSpouseFamilies(gedcom).isEmpty()) {
+			Family spouseFamily = fulcrum.getSpouseFamilies(gedcom).get(0); // TODO loop for multiple marriages
+			Group spouseGroup = new Group(); // In which the fulcrum is the parent
+			spouseGroup.setGuardian(fulcrumNode);
+			fulcrumNode.guardGroup = spouseGroup;
+			int rowNum = nodeRows.size();
+			nodeRows.add(new ArrayList<Node>());
+			for (Person child : spouseFamily.getChildren(gedcom)) {
+				CardNode childNode = new SpouseNode(gedcom, child);
+				spouseGroup.addYoung(childNode, false);
+				childNode.getMainCard().setOrigin(fulcrumNode);
+				nodeRows.get(rowNum).add(childNode);
+				findDescendants(childNode, rowNum);
+			}
 		}
 
 		// All the nodes are stored in a set of nodes
@@ -139,6 +158,7 @@ public class Graph {
 				}
 			}
 		}
+		return true;
 	}
 
 	private void addAncestry(AncestryNode node) {
@@ -153,6 +173,7 @@ public class Graph {
 	 * 
 	 * @param id Id of the person
 	 */
+	@Deprecated
 	public void restartFrom(String id) {
 		baseGroup = null;
 		nodeRows.clear();
@@ -324,6 +345,7 @@ public class Graph {
 				posY += rowMaxHeight[nodeRows.indexOf(row)] / 2 + Util.SPACE
 						+ rowMaxHeight[nodeRows.indexOf(row) + 1] / 2;
 		}
+		height = posY + rowMaxHeight[rowMaxHeight.length - 1] / 2;
 
 		// Horizontal arrangement of all the nodes
 		// Bottom-up starting from fulcrum as youth
@@ -358,7 +380,7 @@ public class Graph {
 			Node center = null;
 			if (!row.isEmpty())
 				posX = row.get(0).x;
-			// Shift nodes to the right
+			// Shift half of the nodes to the right
 			for (Node node : row) {
 				if (posX > fulcrumNode.centerX()) {
 					if (center == null)
@@ -371,8 +393,10 @@ public class Graph {
 				posX = node.x + node.width + Util.PADDING;
 				if (node.x < negativeHorizontal)
 					negativeHorizontal = node.x;
+				if (posX > width)
+					width = posX;
 			}
-			// Shift nodes to the left
+			// Shift half of the nodes to the left
 			if (center != null)
 				posX = center.x + center.width + Util.PADDING;
 			for (int i = row.indexOf(center); i >= 0; i--) {
@@ -383,15 +407,18 @@ public class Graph {
 				posX = row.get(i).x;
 				if (row.get(i).x < negativeHorizontal)
 					negativeHorizontal = row.get(i).x;
+				if (posX > width)
+					width = posX;
 			}
 		}
+		width -= negativeHorizontal + Util.PADDING;
 
 		// Horizontal shift to the right of all the nodes
 		for (Node node : nodes) {
 			node.x -= negativeHorizontal;
 			setCardCoordinates(node);
 		}
-
+		
 		// Create the Lines
 		for (Card card : cards) {
 			lines.add(new Line(card));
