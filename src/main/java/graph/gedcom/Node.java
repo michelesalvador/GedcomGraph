@@ -8,9 +8,4 @@ public abstract class Node {
 	public abstract int centerX();
 	
 	abstract int centerXrel();
-	
-	// Calculate width and height of the node taking the dimensions from the children cards
-	abstract void calcSize();
-	
-	abstract void positionChildren();
 }

@@ -6,7 +6,7 @@ import java.util.List;
 public class Group {
 
 	private Node guardian; // Node of parent(s), is null if there isn't any parent
-	private List<CardNode> youths; // Children with their spouses
+	private List<UnitNode> youths; // Children with their spouses
 
 	public Group() {
 		this.guardian = null;
@@ -21,15 +21,15 @@ public class Group {
 		guardian = node;
 	}
 	
-	public CardNode getYouth(int index ) {
+	public UnitNode getYouth(int index ) {
 		return youths.get(index);
 	}
 	
-	public List<CardNode> getYouths() {
+	public List<UnitNode> getYouths() {
 		return youths;
 	}
 
-	void addYoung(CardNode node, boolean beginning) {
+	void addYoung(UnitNode node, boolean beginning) {
 		if(beginning)
 			youths.add(0, node);
 		else
@@ -38,7 +38,7 @@ public class Group {
 
 	int getYouthWidth() {
 		int w = 0;
-		for (CardNode node : youths) {
+		for (UnitNode node : youths) {
 			w += node.width + Util.PADDING;
 		}
 		return w - Util.PADDING; // TODO e se non ci sono youths?
@@ -57,7 +57,7 @@ public class Group {
 		String str = "...";
 		if( guardian != null )
 			str = guardian.toString();
-		for (CardNode young : youths) {
+		for (UnitNode young : youths) {
 			str += "\n\t" + young.toString();
 		}
 		return str;

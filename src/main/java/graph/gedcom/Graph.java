@@ -21,7 +21,7 @@ public class Graph {
 	private Set<Card> cards;
 	private Set<Ancestor> ancestors;
 	private Set<Line> lines;
-	CardNode fulcrumNode;
+	UnitNode fulcrumNode;
 	Group baseGroup; // In which fulcrum is one of the children (youth)
 
 	public Graph(Gedcom gedcom) {
@@ -86,10 +86,10 @@ public class Graph {
 		if (!fulcrum.getParentFamilies(gedcom).isEmpty()) {
 			Family parentFamily = fulcrum.getParentFamilies(gedcom).get(whichFamily);
 			baseGroup = new Group(); // In which the fulcrum is child
-			CardNode parentNode = null;
+			UnitNode parentNode = null;
 			if (ancestorGenerations > 0)
 				parentNode = new ParentNode(gedcom, parentFamily);
-			fulcrumNode.getMainCard().setOrigin(parentNode);
+			fulcrumNode.getMainCard().origin = parentNode;
 			baseGroup.setGuardian(parentNode);
 			parentNode.guardGroup = baseGroup;
 			for (Person sibling : parentFamily.getChildren(gedcom)) {
@@ -97,9 +97,9 @@ public class Graph {
 					baseGroup.addYoung(fulcrumNode, false);
 					nodeRows.get(0).add(fulcrumNode);
 				} else {
-					CardNode siblingNode = new SpouseNode(gedcom, sibling);
+					UnitNode siblingNode = new SpouseNode(gedcom, sibling);
 					baseGroup.addYoung(siblingNode, false);
-					siblingNode.getMainCard().setOrigin(parentNode);
+					siblingNode.getMainCard().origin = parentNode;
 					nodeRows.get(0).add(siblingNode);
 				}
 			}
@@ -127,9 +127,9 @@ public class Graph {
 			int rowNum = nodeRows.size();
 			nodeRows.add(new ArrayList<Node>());
 			for (Person child : spouseFamily.getChildren(gedcom)) {
-				CardNode childNode = new SpouseNode(gedcom, child);
+				UnitNode childNode = new SpouseNode(gedcom, child);
 				spouseGroup.addYoung(childNode, false);
-				childNode.getMainCard().setOrigin(fulcrumNode);
+				childNode.getMainCard().origin = fulcrumNode;
 				nodeRows.get(rowNum).add(childNode);
 				findDescendants(childNode, rowNum);
 			}
@@ -141,32 +141,32 @@ public class Graph {
 		for (List<Node> row : nodeRows) {
 			for (Node n : row) {
 				nodes.add(n);
-				if (n instanceof CardNode) {
-					CardNode node = (CardNode) n;
+				if (n instanceof UnitNode) {
+					UnitNode node = (UnitNode) n;
 					if (node.husband != null) {
 						cards.add(node.husband);
-						if (node.husband.ancestryNode != null)
-							addAncestry(node.husband.ancestryNode);
+						//if (node.husband.ancestryNode != null)
+							//addAncestry(node.husband.ancestryNode);
 					}
 					if (node.wife != null) {
 						cards.add(node.wife);
-						if (node.wife.ancestryNode != null)
-							addAncestry(node.wife.ancestryNode);
+						//if (node.wife.ancestryNode != null)
+							//addAncestry(node.wife.ancestryNode);
 					}
-				} else if (n instanceof AncestryNode) {
+				} /*else if (n instanceof AncestryNode) {
 					addAncestry((AncestryNode) n);
-				}
+				}*/
 			}
 		}
 		return true;
 	}
 
-	private void addAncestry(AncestryNode node) {
+	/*private void addAncestry(AncestryNode node) {
 		if (node.foreFather != null)
 			ancestors.add(node.foreFather);
 		if (node.foreMother != null)
 			ancestors.add(node.foreMother);
-	}
+	}*/
 
 	/**
 	 * Succesive calls to redraw the graph.
@@ -216,8 +216,8 @@ public class Graph {
 	private void findAncestors(Group descendantGroup, int branch, int rowNum) {
 		rowNum++;
 		Node guardian = descendantGroup.getGuardian();
-		if (guardian instanceof CardNode) {
-			CardNode commonNode = (CardNode) guardian;
+		if (guardian instanceof UnitNode) {
+			UnitNode commonNode = (UnitNode) guardian;
 			Person person = commonNode.getPerson(branch);
 			if (person != null && !person.getParentFamilies(gedcom).isEmpty()) {
 				Family family = person.getParentFamilies(gedcom).get(0);
@@ -229,7 +229,7 @@ public class Graph {
 					parentNode = new AncestryNode(gedcom, commonNode.getCard(branch));
 				if (parentNode != null) {
 					group.setGuardian(parentNode);
-					commonNode.getCard(branch).setOrigin(parentNode);
+					commonNode.getCard(branch).origin = parentNode;
 					parentNode.guardGroup = group;
 				}
 				// Eventually add a new row to the list nodeRows
@@ -248,9 +248,9 @@ public class Graph {
 				// TODO if (rowNum < uncleGenerations)
 				for (Person sibling : family.getChildren(gedcom)) {
 					if (!sibling.equals(person)) {
-						CardNode siblingNode = new SpouseNode(gedcom, sibling);
+						UnitNode siblingNode = new SpouseNode(gedcom, sibling);
 						group.addYoung(siblingNode, false);
-						siblingNode.getMainCard().setOrigin(parentNode);
+						siblingNode.getMainCard().origin = parentNode;
 						// Add the sibling node to nodeRows
 						nodeRow.add(siblingNode);
 					}
@@ -294,7 +294,7 @@ public class Graph {
 	}
 
 	// Recoursive method to find the descendants
-	private void findDescendants(CardNode commonNode, int rowNum) {
+	private void findDescendants(UnitNode commonNode, int rowNum) {
 		rowNum++;
 		Person person = commonNode.getMainCard().getPerson();
 		if (!person.getSpouseFamilies(gedcom).isEmpty()) {
@@ -305,9 +305,9 @@ public class Graph {
 			if (nodeRows.size() <= rowNum)
 				nodeRows.add(new ArrayList<Node>());
 			for (Person child : spouseFamily.getChildren(gedcom)) {
-				CardNode childNode = new SpouseNode(gedcom, child);
+				UnitNode childNode = new SpouseNode(gedcom, child);
 				spouseGroup.addYoung(childNode, false);
-				childNode.getMainCard().setOrigin(commonNode);
+				childNode.getMainCard().origin = commonNode;
 				nodeRows.get(rowNum).add(childNode);
 				findDescendants(childNode, rowNum);
 			}
@@ -324,10 +324,11 @@ public class Graph {
 		// Max shift to the left of the graph
 		int negativeHorizontal = 0;
 
-		// Let every node calculate its own size (width and height) from the size of its cards
+		// Let every unit node calculate its own size (width and height) from the size of its cards
 		for (List<Node> row : nodeRows) {
 			for (Node node : row) {
-				node.calcSize(); // TODO rimasto solo per CardNode
+				if (node instanceof UnitNode)
+					((UnitNode)node).calcSize();
 				// Meanwhile discover the maximum height of rows
 				if (node.height > rowMaxHeight[nodeRows.indexOf(row)])
 					rowMaxHeight[nodeRows.indexOf(row)] = node.height;
@@ -351,7 +352,7 @@ public class Graph {
 		// Bottom-up starting from fulcrum as youth
 		int posX = 0;
 		if (baseGroup != null) {
-			for (CardNode youth : baseGroup.getYouths()) {
+			for (UnitNode youth : baseGroup.getYouths()) {
 				youth.x = posX;
 				posX += youth.width + Util.PADDING;
 				setCardCoordinates(youth);
@@ -360,11 +361,11 @@ public class Graph {
 			Node guardian = baseGroup.getGuardian();
 			if (guardian != null) {
 				guardian.x = baseGroup.getYouth(0).getMainCard().centerX() + baseGroup.getArcWidth(0) / 2 - guardian.centerX();
-				if (guardian instanceof CardNode) {
-					setCardCoordinates((CardNode) guardian);
+				if (guardian instanceof UnitNode) {
+					setCardCoordinates((UnitNode) guardian);
 					// Call recoursive methods for ancestors
-					arrangeHusbandGroup((CardNode) guardian);
-					arrangeWifeGroup((CardNode) guardian);
+					arrangeHusbandGroup((UnitNode) guardian);
+					arrangeWifeGroup((UnitNode) guardian);
 				}
 			}
 		} else { // Fulcrum hasn't a parent family
@@ -421,42 +422,27 @@ public class Graph {
 		
 		// Create the Lines
 		for (Card card : cards) {
-			lines.add(new Line(card));
+			if (!card.acquired) // Acquired spouse don't need lines to ancestors
+				lines.add(new Line(card));
 		}
 	}
 
-	/**
-	 * Set the absolute coordinates of the cards of a node, deducing from the
-	 * absolute coordinates of this node.
-	 * 
-	 * @param node The node to consider
-	 */
-	private void setCardCoordinates(Node n) {
-		if (n instanceof CardNode) {
-			CardNode node = (CardNode) n;
-			node.positionChildren();
-			// Position of ancestry node and ancestry cards above acquired relative
-			Card spouse = node.getSpouseCard();
-			if (spouse != null && spouse.ancestryNode != null) {
-				spouse.ancestryNode.x = spouse.centerX() - spouse.ancestryNode.centerXrel();
-				spouse.ancestryNode.y = spouse.y - spouse.ancestryNode.height - 15;
-				spouse.ancestryNode.positionChildren();
-			}
-		} // Ancestry node on top of the graph
-		else if (n instanceof AncestryNode) {
-			((AncestryNode) n).positionChildren();
+	// Set the absolute coordinates of the cards of a node, deducing from the absolute coordinates of this node.
+	private void setCardCoordinates(Node node) {
+		if (node instanceof UnitNode) {
+			((UnitNode)node).positionChildren();
 		}
 	}
 
 	// Recoursive methods to arrange horizontally youths and guardian of a group
 	// The group in which the husband is child
-	private void arrangeHusbandGroup(CardNode commonNode) {
+	private void arrangeHusbandGroup(UnitNode commonNode) {
 		Group group = commonNode.husbandGroup;
 		if (group != null) {
 			if (group.getYouths().size() > 1) {
 				int moveX = commonNode.x;
 				for (int i = group.getYouths().size() - 2; i >= 0; i--) {
-					CardNode uncle = group.getYouth(i);
+					UnitNode uncle = group.getYouth(i);
 					moveX -= (Util.PADDING + uncle.width);
 					uncle.x = moveX;
 					setCardCoordinates(uncle);
@@ -467,13 +453,13 @@ public class Graph {
 	}
 
 	// The group in which the wife is child
-	private void arrangeWifeGroup(CardNode commonNode) {
+	private void arrangeWifeGroup(UnitNode commonNode) {
 		Group group = commonNode.wifeGroup;
 		if (group != null) {
 			if (group.getYouths().size() > 1) {
 				int moveX = commonNode.x + commonNode.width + Util.PADDING;
 				for (int i = 1; i < group.getYouths().size(); i++) {
-					CardNode uncle = group.getYouth(i);
+					UnitNode uncle = group.getYouth(i);
 					uncle.x = moveX;
 					moveX += uncle.width + Util.PADDING;
 					setCardCoordinates(uncle);
@@ -499,19 +485,19 @@ public class Graph {
 					guardian.x = group.getYouth(0).getCard(2).centerX() + group.getArcWidth(branch) / 2 - guardian.centerX();
 			} else // Only one child
 				guardian.x = group.getYouth(0).getCard(branch).centerX() - guardian.centerX();
-			if (guardian instanceof CardNode) {
-				setCardCoordinates((CardNode) guardian);
-				arrangeHusbandGroup((CardNode) guardian);
-				arrangeWifeGroup((CardNode) guardian);
+			if (guardian instanceof UnitNode) {
+				setCardCoordinates((UnitNode) guardian);
+				arrangeHusbandGroup((UnitNode) guardian);
+				arrangeWifeGroup((UnitNode) guardian);
 			}
 		}
 	}
 
 	// Recoursive method for horizontal position of the descendants
-	private void arrangeYouths(CardNode guardian) {
+	private void arrangeYouths(UnitNode guardian) {
 		if (guardian.guardGroup != null) {
 			int moveX = guardian.centerX() - guardian.guardGroup.getYouthWidth() / 2; // TODO non no non ono
-			for (CardNode youth : guardian.guardGroup.getYouths()) {
+			for (UnitNode youth : guardian.guardGroup.getYouths()) {
 				youth.x = moveX;
 				moveX += youth.width + Util.PADDING;
 				setCardCoordinates(youth);

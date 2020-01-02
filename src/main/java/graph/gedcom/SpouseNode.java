@@ -4,7 +4,7 @@ import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
 
-public final class SpouseNode extends CardNode {
+public final class SpouseNode extends UnitNode {
 	
 	public SpouseNode(Gedcom gedcom, Person person) {
 		// Couple
@@ -14,11 +14,9 @@ public final class SpouseNode extends CardNode {
 			// Define the acquired spouse
 			if (isCouple()) {
 				if (person.equals(husband.getPerson())) {
-					wife.acquired = true;
-					wife.ancestryNode = new AncestryNode(gedcom, wife);
+					defineSpouse(gedcom, wife);
 				} else if (person.equals(wife.getPerson())) {
-					husband.acquired = true;
-					husband.ancestryNode = new AncestryNode(gedcom, husband);
+					defineSpouse(gedcom, husband);
 				}
 			}
 		} // Single person
@@ -29,6 +27,13 @@ public final class SpouseNode extends CardNode {
 				husband = new Card(person);
 			}
 		}
+	}
+	
+	private void defineSpouse(Gedcom gedcom, Card card) {
+		card.acquired = true;
+		AncestryNode ancestry = new AncestryNode(gedcom, card);
+		if(ancestry.foreFather != null || ancestry.foreMother != null)
+			card.origin = ancestry;
 	}
 	
 	/**

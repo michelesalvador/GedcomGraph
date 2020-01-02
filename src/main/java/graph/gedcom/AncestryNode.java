@@ -9,6 +9,7 @@ public final class AncestryNode extends Node {
 	public Ancestor foreFather, foreMother;
 	private Gedcom gedcom;
 	private int people;
+	public int horizontalCenter;
 
 	public AncestryNode(Gedcom gedcom, Card card) {
 		this.gedcom = gedcom;
@@ -25,11 +26,10 @@ public final class AncestryNode extends Node {
 				countAncestors(family.getWives(gedcom).get(0));
 				foreMother = new Ancestor(family.getWives(gedcom).get(0), people);
 			}
-			card.setOrigin(this);
 		}
 	}
 
-	// The little card with lineage info
+	// The little card with the lineage number
 	public class Ancestor {
 		public Person person;
 		public int ancestry;
@@ -60,43 +60,15 @@ public final class AncestryNode extends Node {
 		return foreFather != null && foreMother != null;
 	}
 
+	@Deprecated
 	public boolean isSingle() {
 		return foreFather != null || foreMother != null;
 	}
 
 	@Override
-	void calcSize() {
-		if (isCouple()) {
-			width = foreFather.width + Util.GAP + foreMother.width;
-			height = foreFather.height;
-		} else if (foreFather != null) {
-			width = foreFather.width;
-			height = foreFather.height;
-		} else if (foreMother != null) {
-			width = foreMother.width;
-			height = foreMother.height;
-		}
-	}
-
-	// Position of the ancestry cards
-	@Override
-	void positionChildren() {
-		if (foreFather != null) {
-			foreFather.x = x;
-			foreFather.y = y;
-		}
-		if (isCouple()) {
-			foreMother.x = x + foreFather.width + Util.GAP;
-			foreMother.y = y;
-		} else if (foreMother != null) {
-			foreMother.x = x;
-			foreMother.y = y;
-		}
-	}
-
-	@Override
 	public int centerX() {
-		return x + centerXrel();
+		//return x + centerXrel();
+		return x + horizontalCenter;
 	}
 
 	public int centerY() {
@@ -105,13 +77,14 @@ public final class AncestryNode extends Node {
 
 	@Override
 	public int centerXrel() {
-		if (isCouple())
+		/*if (isCouple())
 			return foreFather.width + Util.GAP / 2;
 		else if (foreFather != null)
-			return foreFather.width / 2;
+			return width / 2;
 		else if (foreMother != null)
-			return foreMother.width / 2;
-		return 0;
+			return width / 2;
+		return 0;*/
+		return horizontalCenter;
 	}
 
 	public int centerYrel() {

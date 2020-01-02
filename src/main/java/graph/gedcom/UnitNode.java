@@ -7,7 +7,7 @@ import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
 
-public abstract class CardNode extends Node {
+public abstract class UnitNode extends Node {
 
 	public Card husband;
 	public Card wife;
@@ -75,27 +75,21 @@ public abstract class CardNode extends Node {
 		return husband != null || wife != null;
 	}
 
-	// Measures of a node from the measures of its cards
-	@Override
+	// Calculate width and height of this node taking the dimensions of the cards
 	void calcSize() {
 		if (isCouple()) {
 			width = husband.width + Util.MARGIN + wife.width;
 			height = Math.max(husband.height, wife.height); // max height between the two
-			sizeAncestry(husband);
-			sizeAncestry(wife);
 		} else if (husband != null) {
 			width = husband.width;
 			height = husband.height;
-			sizeAncestry(husband);
 		} else if (wife != null) {
 			width = wife.width;
 			height = wife.height;
-			sizeAncestry(wife);
 		}
 	}
 
 	// Position of the ancestry cards
-	@Override
 	void positionChildren() {
 		if (husband != null) {
 			husband.x = x;
@@ -107,13 +101,6 @@ public abstract class CardNode extends Node {
 		} else if (wife != null) {
 			wife.x = x;
 			wife.y = y;
-		}
-	}
-
-	// Measures of ancestry node from its ancestors little cards
-	private void sizeAncestry(Card card) {
-		if (card.ancestryNode != null) {
-			card.ancestryNode.calcSize();
 		}
 	}
 
