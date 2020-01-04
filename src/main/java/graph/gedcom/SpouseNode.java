@@ -1,10 +1,14 @@
 package graph.gedcom;
 
+import java.util.List;
+
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
 
 public final class SpouseNode extends UnitNode {
+	
+	public ProgenyNode progeny;
 	
 	public SpouseNode(Gedcom gedcom, Person person) {
 		// Couple
@@ -13,26 +17,28 @@ public final class SpouseNode extends UnitNode {
 			init(gedcom, family);
 			// Define the acquired spouse
 			if (isCouple()) {
-				if (person.equals(husband.getPerson())) {
+				if (person.equals(husband.person)) {
 					defineSpouse(gedcom, wife);
-				} else if (person.equals(wife.getPerson())) {
+				} else if (person.equals(wife.person)) {
 					defineSpouse(gedcom, husband);
 				}
 			}
+			if (!family.getChildRefs().isEmpty())
+				progeny = new ProgenyNode(gedcom, family, this);
 		} // Single person
 		else {
 			if (Util.sex(person) == 2) {
-				wife = new Card(person);
+				wife = new IndiCard(person);
 			} else {
-				husband = new Card(person);
+				husband = new IndiCard(person);
 			}
 		}
 	}
 	
-	private void defineSpouse(Gedcom gedcom, Card card) {
+	private void defineSpouse(Gedcom gedcom, IndiCard card) {
 		card.acquired = true;
 		AncestryNode ancestry = new AncestryNode(gedcom, card);
-		if(ancestry.foreFather != null || ancestry.foreMother != null)
+		if(ancestry.miniFather != null || ancestry.miniMother != null)
 			card.origin = ancestry;
 	}
 	
@@ -42,7 +48,7 @@ public final class SpouseNode extends UnitNode {
 	 * @return A Card
 	 */
 	@Override
-	public Card getMainCard() {
+	public IndiCard getMainCard() {
 		if(isCouple()) {
 			if(wife.acquired)
 				return husband;
@@ -56,7 +62,7 @@ public final class SpouseNode extends UnitNode {
 	}
 	
 	@Override
-	public Card getSpouseCard() {
+	public IndiCard getSpouseCard() {
 		if(isCouple()) {
 			if(husband.acquired)
 				return husband;

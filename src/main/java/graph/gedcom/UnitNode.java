@@ -9,9 +9,10 @@ import org.folg.gedcom.model.Person;
 
 public abstract class UnitNode extends Node {
 
-	public Card husband;
-	public Card wife;
+	public IndiCard husband;
+	public IndiCard wife;
 	public String marriageDate;
+	public int bondWidth; // It dependes on marriageDate
 	Group husbandGroup; // The group to which the husband of this node belongs as child
 	Group wifeGroup; // The group to which the wife of this node belongs as child
 
@@ -25,10 +26,10 @@ public abstract class UnitNode extends Node {
 	public void init(Gedcom gedcom, Family family) {
 		Person him = !family.getHusbandRefs().isEmpty() ? family.getHusbands(gedcom).get(0) : null;
 		if (him != null)
-			husband = new Card(him);
+			husband = new IndiCard(him);
 		Person her = !family.getWifeRefs().isEmpty() ? family.getWives(gedcom).get(0) : null;
 		if (her != null)
-			wife = new Card(her);
+			wife = new IndiCard(her);
 		// Gedcom date of the marriage
 		for (EventFact ef : family.getEventsFacts()) {
 			if (ef.getTag().equals("MARR"))
@@ -36,16 +37,16 @@ public abstract class UnitNode extends Node {
 		}
 	}
 
-	public abstract Card getMainCard();
+	public abstract IndiCard getMainCard();
 
-	public abstract Card getSpouseCard();
+	public abstract IndiCard getSpouseCard();
 
 	/**
 	 * 
 	 * @param branch 1 for the husband, 2 for the wife
 	 * @return
 	 */
-	public Card getCard(int branch) {
+	public IndiCard getCard(int branch) {
 		if (branch == 1)
 			return husband;
 		else if (branch == 2)
@@ -53,17 +54,17 @@ public abstract class UnitNode extends Node {
 		return null;
 	}
 
-	public Set<Card> getTwo() {
-		Set<Card> two = new HashSet<Card>();
+	public Set<IndiCard> getTwo() {
+		Set<IndiCard> two = new HashSet<IndiCard>();
 		two.add(husband);
 		two.add(wife);
 		return two;
 	}
 
 	Person getPerson(int branch) {
-		Card card = getCard(branch);
+		IndiCard card = getCard(branch);
 		if (card != null)
-			return card.getPerson();
+			return card.person;
 		return null;
 	}
 
@@ -71,6 +72,7 @@ public abstract class UnitNode extends Node {
 		return husband != null && wife != null;
 	}
 
+	@Deprecated
 	public boolean isSingle() {
 		return husband != null || wife != null;
 	}
@@ -78,7 +80,9 @@ public abstract class UnitNode extends Node {
 	// Calculate width and height of this node taking the dimensions of the cards
 	void calcSize() {
 		if (isCouple()) {
-			width = husband.width + Util.MARGIN + wife.width;
+			width = husband.width + bondWidth + wife.width;
+			if(marriageDate != null)
+				width -= Util.TIC * 2;			
 			height = Math.max(husband.height, wife.height); // max height between the two
 		} else if (husband != null) {
 			width = husband.width;
@@ -90,6 +94,7 @@ public abstract class UnitNode extends Node {
 	}
 
 	// Position of the ancestry cards
+	@Deprecated
 	void positionChildren() {
 		if (husband != null) {
 			husband.x = x;
@@ -105,27 +110,27 @@ public abstract class UnitNode extends Node {
 	}
 
 	@Override
-	public int centerX() {
-		if (husband != null && wife != null)
-			return x + husband.width + Util.MARGIN / 2;
-		else if (husband != null)
-			return x + husband.width / 2;
-		else if (wife != null)
-			return x + wife.width / 2;
-		return x;
-	}
-
-	public int centerY() {
-		return y + height / 2;
-	}
-
-	@Override
 	public int centerXrel() {
-		return husband.width + Util.MARGIN / 2;
+		if (isCouple())
+			return husband.width + bondWidth / 2 - (marriageDate != null ? Util.TIC : 0);
+		else if (husband != null)
+			return husband.width / 2;
+		else if (wife != null)
+			return wife.width / 2;
+		return 0;
 	}
 
 	public int centerYrel() {
 		return height / 2;
+	}
+
+	@Override
+	public int centerX() {
+		return x + centerXrel();
+	}
+
+	public int centerY() {
+		return y + centerYrel();
 	}
 
 	// Simple solution to retrieve the marriage year. Family Gem uses another much
@@ -139,6 +144,13 @@ public abstract class UnitNode extends Node {
 				year = marriageDate;
 		}
 		return year;
+	}
+	
+	public ProgenyNode getProgeny() {
+		if(this instanceof SpouseNode && ((SpouseNode)this).progeny != null) {
+			return ((SpouseNode)this).progeny;
+		}
+		return null;
 	}
 
 	@Override

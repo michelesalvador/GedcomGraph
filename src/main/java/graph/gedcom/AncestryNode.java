@@ -6,41 +6,29 @@ import org.folg.gedcom.model.Person;
 
 public final class AncestryNode extends Node {
 
-	public Ancestor foreFather, foreMother;
+	public MiniCard miniFather, miniMother;
 	private Gedcom gedcom;
 	private int people;
 	public int horizontalCenter;
 
-	public AncestryNode(Gedcom gedcom, Card card) {
+	public AncestryNode(Gedcom gedcom, IndiCard card) {
 		this.gedcom = gedcom;
-		Person person = card.getPerson();
+		Person person = card.person;
 		if (!person.getParentFamilies(gedcom).isEmpty()) {
 			Family family = person.getParentFamilies(gedcom).get(0);
 			if (!family.getHusbands(gedcom).isEmpty()) {
 				people = 1;
 				countAncestors(family.getHusbands(gedcom).get(0));
-				foreFather = new Ancestor(family.getHusbands(gedcom).get(0), people);
+				miniFather = new MiniCard(family.getHusbands(gedcom).get(0), people);
 			}
 			if (!family.getWives(gedcom).isEmpty()) {
 				people = 1;
 				countAncestors(family.getWives(gedcom).get(0));
-				foreMother = new Ancestor(family.getWives(gedcom).get(0), people);
+				miniMother = new MiniCard(family.getWives(gedcom).get(0), people);
 			}
 		}
 	}
-
-	// The little card with the lineage number
-	public class Ancestor {
-		public Person person;
-		public int ancestry;
-		public int x, y, width, height;
-
-		public Ancestor(Person person, int ancestry) {
-			this.person = person;
-			this.ancestry = ancestry;
-		}
-	}
-
+	
 	// Recoursive count of direct ancestors
 	private void countAncestors(Person person) {
 		if (people < 100)
@@ -57,12 +45,7 @@ public final class AncestryNode extends Node {
 	}
 
 	public boolean isCouple() {
-		return foreFather != null && foreMother != null;
-	}
-
-	@Deprecated
-	public boolean isSingle() {
-		return foreFather != null || foreMother != null;
+		return miniFather != null && miniMother != null;
 	}
 
 	@Override
@@ -94,11 +77,11 @@ public final class AncestryNode extends Node {
 	@Override
 	public String toString() {
 		String str = "";
-		if (foreFather != null)
-			str += foreFather.ancestry;
+		if (miniFather != null)
+			str += miniFather.ancestry;
 		str += " - ";
-		if (foreMother != null)
-			str += foreMother.ancestry;
+		if (miniMother != null)
+			str += miniMother.ancestry;
 		return str;
 	}
 }

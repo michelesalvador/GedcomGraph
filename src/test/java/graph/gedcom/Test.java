@@ -7,7 +7,7 @@ import org.apache.commons.io.FileUtils;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.parser.JsonParser;
 import org.folg.gedcom.parser.ModelParser;
-import graph.gedcom.Card;
+import graph.gedcom.IndiCard;
 import graph.gedcom.Graph;
 import static graph.gedcom.Util.pr;
 

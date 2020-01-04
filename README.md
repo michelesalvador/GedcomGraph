@@ -8,7 +8,7 @@ _GedcomGraph_ has been primary created to generate the genealogical diagram into
 
 You can find a simple implementation of _GedcomGraph_ made with Java AWT/Swing in [GedcomGraph canvas](https://github.com/michelesalvador/GedcomGraph-canvas).
 
-_GedcomGraph_ is written in Java 1.7, so to be compatible with older versions of Android: it has been tested up to Android 4.1 Jelly Bean.
+_GedcomGraph_ is written in Java 1.7, so to be compatible with older versions of Android: it has been tested up to Android 4.4 KitKat.
 
 _GedcomGraph_ can receive some option to modify the tree output, but basically the tree has always the zero coordinates on top-left corner, the ancestors above and the descendants below, and the marriage year between spouses.
 

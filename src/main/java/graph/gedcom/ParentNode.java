@@ -10,12 +10,12 @@ public final class ParentNode extends UnitNode {
 	}
 
 	@Override
-	public Card getMainCard() {
+	public IndiCard getMainCard() {
 		return null;
 	}
 
 	@Override
-	public Card getSpouseCard() {
+	public IndiCard getSpouseCard() {
 		return null;
 	}
 }

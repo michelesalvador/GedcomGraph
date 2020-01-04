@@ -4,13 +4,13 @@ public class Line {
 
 	public int x1, y1, x2, y2;
 
-	public Line( Card end ) {
-		Node start = end.origin;
-		if( start != null ) {
-			x1 = start.centerX();
-			y1 = start.y + start.height;
-			x2 = end.centerX();
-			y2 = end.y;
+	public Line( Card card ) {
+		Node origin = card.origin;
+		if( origin != null ) {
+			x1 = origin.centerX();
+			y1 = origin.y + origin.height;
+			x2 = card.centerX();
+			y2 = card.y;
 		}
 	}
 }

@@ -7,9 +7,9 @@ public class Util {
 	
 	public static int PADDING = 30; // Horizontal space between nodes
 	public static int MARGIN = 30; // Space between husband and wife
-	public static int SPACE = 100; // Vertical space between rows of cards
-	@Deprecated
-	public static int GAP = 20; // Horizontal space between ancestors (determinated by layout view)
+	public static int SPACE = 150; // Vertical space between rows of cards
+	public static int TIC = 25; // Horizontal overlap of the year over the cards
+	public static int GAP = 40; // Vertical space between unit node and progeny
 
 	/**
 	 * Utility to know the sex of a person.

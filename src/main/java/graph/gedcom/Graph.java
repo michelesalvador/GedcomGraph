@@ -7,7 +7,6 @@ import java.util.Set;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
-import graph.gedcom.AncestryNode.Ancestor;
 import static graph.gedcom.Util.pr;
 
 public class Graph {
@@ -19,7 +18,6 @@ public class Graph {
 	private List<List<Node>> nodeRows; // A list of lists of all the nodes
 	private Set<Node> nodes;
 	private Set<Card> cards;
-	private Set<Ancestor> ancestors;
 	private Set<Line> lines;
 	UnitNode fulcrumNode;
 	Group baseGroup; // In which fulcrum is one of the children (youth)
@@ -29,7 +27,6 @@ public class Graph {
 		nodeRows = new ArrayList<>();
 		nodes = new HashSet<>();
 		cards = new HashSet<>();
-		ancestors = new HashSet<>();
 		lines = new HashSet<>();
 		// default values
 		ancestorGenerations = 2;
@@ -66,7 +63,7 @@ public class Graph {
 		nodeRows.clear();
 		nodes.clear();
 		cards.clear();
-		ancestors.clear();
+		//ancestors.clear();
 		lines.clear();
 		width = 0;
 		height = 0;
@@ -137,55 +134,30 @@ public class Graph {
 
 		// All the nodes are stored in a set of nodes
 		// All the cards are stored in a set of cards
-		// All the ancestors are stored in a set of ancestors
 		for (List<Node> row : nodeRows) {
 			for (Node n : row) {
 				nodes.add(n);
 				if (n instanceof UnitNode) {
 					UnitNode node = (UnitNode) n;
-					if (node.husband != null) {
+					if (node.husband != null)
 						cards.add(node.husband);
-						//if (node.husband.ancestryNode != null)
-							//addAncestry(node.husband.ancestryNode);
-					}
-					if (node.wife != null) {
+					if (node.wife != null)
 						cards.add(node.wife);
-						//if (node.wife.ancestryNode != null)
-							//addAncestry(node.wife.ancestryNode);
-					}
-				} /*else if (n instanceof AncestryNode) {
-					addAncestry((AncestryNode) n);
-				}*/
+					// Also the progeny node and the progeny mini cards
+					/*ProgenyNode progeny = node.getProgeny();
+					if (progeny != null) {
+						nodes.add(progeny);
+						for( MiniCard miniCard : ((SpouseNode)node).progeny.miniChildren )
+							cards.add(miniCard);
+					}*/
+				}
 			}
 		}
 		return true;
 	}
 
-	/*private void addAncestry(AncestryNode node) {
-		if (node.foreFather != null)
-			ancestors.add(node.foreFather);
-		if (node.foreMother != null)
-			ancestors.add(node.foreMother);
-	}*/
-
-	/**
-	 * Succesive calls to redraw the graph.
-	 * 
-	 * @param id Id of the person
-	 */
-	@Deprecated
-	public void restartFrom(String id) {
-		baseGroup = null;
-		nodeRows.clear();
-		nodes.clear();
-		cards.clear();
-		ancestors.clear();
-		lines.clear();
-		startFrom(id);
-	}
-
 	public String getStartId() {
-		return fulcrumNode.getMainCard().getPerson().getId();
+		return fulcrumNode.getMainCard().person.getId();
 	}
 
 	public Set<Node> getNodes() {
@@ -194,10 +166,6 @@ public class Graph {
 
 	public Set<Card> getCards() {
 		return cards;
-	}
-
-	public Set<Ancestor> getAncestors() {
-		return ancestors;
 	}
 
 	public Set<Line> getLines() {
@@ -296,7 +264,7 @@ public class Graph {
 	// Recoursive method to find the descendants
 	private void findDescendants(UnitNode commonNode, int rowNum) {
 		rowNum++;
-		Person person = commonNode.getMainCard().getPerson();
+		Person person = commonNode.getMainCard().person;
 		if (!person.getSpouseFamilies(gedcom).isEmpty()) {
 			Family spouseFamily = person.getSpouseFamilies(gedcom).get(0);
 			Group spouseGroup = new Group(); // In which the person is a parent
