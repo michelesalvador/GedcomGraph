@@ -72,17 +72,16 @@ public abstract class UnitNode extends Node {
 		return husband != null && wife != null;
 	}
 
-	@Deprecated
-	public boolean isSingle() {
-		return husband != null || wife != null;
+	// If this unit has youths or progeny to display
+	public boolean hasChildren() {
+		return (guardGroup != null && !guardGroup.getYouths().isEmpty()) ||
+				(this instanceof SpouseNode && ((SpouseNode)this).progeny != null);
 	}
 
 	// Calculate width and height of this node taking the dimensions of the cards
 	void calcSize() {
 		if (isCouple()) {
-			width = husband.width + bondWidth + wife.width;
-			if(marriageDate != null)
-				width -= Util.TIC * 2;			
+			width = husband.width + bondWidth + wife.width - (marriageDate != null ? Util.TIC * 2 : 0);			
 			height = Math.max(husband.height, wife.height); // max height between the two
 		} else if (husband != null) {
 			width = husband.width;
@@ -93,15 +92,14 @@ public abstract class UnitNode extends Node {
 		}
 	}
 
-	// Position of the ancestry cards
-	@Deprecated
-	void positionChildren() {
+	// Set the absolute position of the cards
+	void positionCards() {
 		if (husband != null) {
 			husband.x = x;
 			husband.y = y + (height - husband.height) / 2;
 		}
 		if (isCouple()) {
-			wife.x = x + husband.width + Util.MARGIN;
+			wife.x = x + husband.width + bondWidth;// - (marriageDate != null ? Util.TIC * 2 : 0);
 			wife.y = y + (height - wife.height) / 2;
 		} else if (wife != null) {
 			wife.x = x;

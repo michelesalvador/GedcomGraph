@@ -13,7 +13,6 @@ public class MiniCard extends Card {
 
 	@Override
 	public int centerX() {
-		// TODO Auto-generated method stub
-		return 0;
+		return x + width / 2;
 	}
 }

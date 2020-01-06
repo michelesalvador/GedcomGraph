@@ -1,7 +1,5 @@
 package graph.gedcom;
 
-import java.util.List;
-
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
@@ -10,7 +8,7 @@ public final class SpouseNode extends UnitNode {
 	
 	public ProgenyNode progeny;
 	
-	public SpouseNode(Gedcom gedcom, Person person) {
+	public SpouseNode(Gedcom gedcom, Person person, boolean withProgeny) {
 		// Couple
 		if (!person.getSpouseFamilies(gedcom).isEmpty()) {
 			Family family = person.getSpouseFamilies(gedcom).get(0);
@@ -23,7 +21,7 @@ public final class SpouseNode extends UnitNode {
 					defineSpouse(gedcom, husband);
 				}
 			}
-			if (!family.getChildRefs().isEmpty())
+			if (!family.getChildRefs().isEmpty() && withProgeny)
 				progeny = new ProgenyNode(gedcom, family, this);
 		} // Single person
 		else {

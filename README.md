@@ -16,9 +16,9 @@ _GedcomGraph_ can receive some option to modify the tree output, but basically t
 
 At the moment you can choose to display:
 - Number of generations of ancestors
+- Number of generations of descendants
 - ~~Number of generations of uncles~~
 - ~~Siblings~~
-- ~~Number of generations of descendants~~
 
 ## Package
 
