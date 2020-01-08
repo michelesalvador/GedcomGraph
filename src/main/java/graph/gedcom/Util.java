@@ -7,8 +7,8 @@ public class Util {
 	
 	public static int PADDING = 25; // Horizontal space between nodes
 	public static int MARGIN = 30; // Standard space between husband and wife
-	public static int SPACE = 160; // Vertical space between rows of cards
-	public static int TIC = 20; // Horizontal overlap of the year over the cards
+	public static int SPACE = 180; // Vertical space between rows of cards
+	public static int TIC = 15; // Horizontal overlap of the marriage year over the cards
 	public static int GAP = 40; // Vertical space between unit and progeny
 	public static int PLAY = 30; // Horizontal space between progeny mini cards
 

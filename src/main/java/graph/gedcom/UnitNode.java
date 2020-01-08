@@ -1,24 +1,78 @@
 package graph.gedcom;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
+import static graph.gedcom.Util.pr;
 
-public abstract class UnitNode extends Node {
+public class UnitNode extends Node {
 
 	public IndiCard husband;
 	public IndiCard wife;
 	public String marriageDate;
 	public int bondWidth; // It dependes on marriageDate
+	public ProgenyNode progeny;
 	Group husbandGroup; // The group to which the husband of this node belongs as child
 	Group wifeGroup; // The group to which the wife of this node belongs as child
+	
+	public UnitNode(Gedcom gedcom, Person person, boolean withProgeny ) {
+		this(gedcom, person, withProgeny, false);
+	}
+
+	public UnitNode(Gedcom gedcom, Person person, boolean withProgeny, boolean thisIsFulcrumNode) {
+		// Couple
+		List<Family> families = person.getSpouseFamilies(gedcom);
+		if (!families.isEmpty()) {
+			// Usually displays the last marriage of a person
+			// One wife with multi marriages appears as indi card just in the fulcrum node, asterisk before 
+			int whichMarriage = families.size() - 1;
+			if (thisIsFulcrumNode && families.size() > 1 && person == families.get(0).getHusbands(gedcom).get(0))
+				whichMarriage = 0;
+			Family family = families.get(whichMarriage);
+			init(gedcom, family);
+			// Define the acquired spouse
+			if (isCouple()) {
+				if (person.equals(husband.person)) {
+					defineSpouse(gedcom, wife);
+				} else if (person.equals(wife.person)) {
+					defineSpouse(gedcom, husband);
+				}
+			}
+			if (!family.getChildRefs().isEmpty() && withProgeny)
+				progeny = new ProgenyNode(gedcom, family, this);
+		} // Single person
+		else {
+			if (Util.sex(person) == 2) {
+				wife = new IndiCard(person);
+			} else {
+				husband = new IndiCard(person);
+			}
+		}
+	}
+	
+	public UnitNode(Gedcom gedcom, Family family) {
+		init(gedcom, family);
+	}
+	
+	// The asterisk version
+	public UnitNode(Gedcom gedcom, Family family, int type, boolean withProgeny) {
+		init(gedcom, family);
+		if(type == 1) {
+			husband.asterisk = true;
+			defineSpouse(gedcom, wife);
+		} else if(type == 2) {
+			wife.asterisk = true;
+			defineSpouse(gedcom, husband);
+		}
+	}
 
 	/**
-	 * This method actually replaces the CardNode constructor.
-	 * It takes the parent(s) from a family to create the cards.
+	 * This method actually replaces the UnitNode constructor.
+	 * It takes the parent(s) from a family to create the indi cards.
 	 * 
 	 * @param gedcom
 	 * @param family
@@ -37,19 +91,55 @@ public abstract class UnitNode extends Node {
 		}
 	}
 
-	public abstract IndiCard getMainCard();
-
-	public abstract IndiCard getSpouseCard();
+	// Complete the definition of the acquired spouse
+	void defineSpouse(Gedcom gedcom, IndiCard card) {
+		card.acquired = true;
+		AncestryNode ancestry = new AncestryNode(gedcom, card);
+		if(ancestry.miniFather != null || ancestry.miniMother != null)
+			card.origin = ancestry;
+	}
 
 	/**
+	 * Retrieve the card of the blood relative (that is, not the spouse), if existing.
 	 * 
+	 * @return A Card
+	 */
+	public IndiCard getMainCard() {
+		if(isCouple() && (husband.acquired || wife.acquired)) {
+			if(wife.acquired)
+				return husband;
+			else
+				return wife;
+		} else if (husband != null)
+			return husband;
+		else if (wife != null)
+			return wife;
+		return null;		
+	}
+	
+	public IndiCard getSpouseCard() {
+		if(isCouple()) {
+			if(husband.acquired)
+				return husband;
+			else
+				return wife;
+		}
+		return null;
+	}
+
+	/**
+	 * Return husband or wife, as preferred 
 	 * @param branch 1 for the husband, 2 for the wife
 	 * @return
 	 */
 	public IndiCard getCard(int branch) {
-		if (branch == 1)
+		if (branch == 1 && husband != null)
 			return husband;
-		else if (branch == 2)
+		else if (branch == 2 && wife != null)
+			return wife;
+		else if (husband != null)
+			return husband;
+		else if (wife != null)
 			return wife;
 		return null;
 	}
@@ -74,8 +164,7 @@ public abstract class UnitNode extends Node {
 
 	// If this unit has youths or progeny to display
 	public boolean hasChildren() {
-		return (guardGroup != null && !guardGroup.getYouths().isEmpty()) ||
-				(this instanceof SpouseNode && ((SpouseNode)this).progeny != null);
+		return (guardGroup != null && !guardGroup.getYouths().isEmpty()) || progeny != null;
 	}
 
 	// Calculate width and height of this node taking the dimensions of the cards
@@ -130,6 +219,22 @@ public abstract class UnitNode extends Node {
 	public int centerY() {
 		return y + centerYrel();
 	}
+	
+	// Useful to calculate the width of youths, excluding acquired spouses at the ends
+	int getMainWidth(boolean first) {
+		IndiCard mainCard = getMainCard();
+		if(first) {
+			if(mainCard.equals(wife))
+				return wife.width;
+			else
+				return width;
+		} else {
+			if(mainCard.equals(husband))
+				return husband.width;
+			else
+				return width;
+		}
+	}
 
 	// Simple solution to retrieve the marriage year. Family Gem uses another much
 	// more complex.
@@ -142,13 +247,6 @@ public abstract class UnitNode extends Node {
 				year = marriageDate;
 		}
 		return year;
-	}
-	
-	public ProgenyNode getProgeny() {
-		if(this instanceof SpouseNode && ((SpouseNode)this).progeny != null) {
-			return ((SpouseNode)this).progeny;
-		}
-		return null;
 	}
 
 	@Override

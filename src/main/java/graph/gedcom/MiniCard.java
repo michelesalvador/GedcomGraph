@@ -4,11 +4,16 @@ import org.folg.gedcom.model.Person;
 
 public class MiniCard extends Card {
 
-	public int ancestry;
+	public int amount;
 
-	public MiniCard(Person person, int ancestry) {
+	public MiniCard(Person person, int amount) {
 		this.person = person;
-		this.ancestry = ancestry;
+		this.amount = amount;
+	}
+
+	@Override
+	int centerXrel() {
+		return width / 2;
 	}
 
 	@Override

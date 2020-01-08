@@ -5,6 +5,7 @@ import java.util.List;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
+import static graph.gedcom.Util.pr;
 
 public class ProgenyNode extends Node {
 

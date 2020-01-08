@@ -5,6 +5,7 @@ import org.folg.gedcom.model.Person;
 public class IndiCard extends Card {
 
 	public boolean dead;
+	public boolean asterisk;
 
 	public IndiCard( Person person) {
 		this.person = person;
@@ -12,13 +13,18 @@ public class IndiCard extends Card {
 			dead = true;
 		}
 	}
+
+	@Override
+	int centerXrel() {
+		return width / 2;
+	}
 	
+	@Override
 	public int centerX() {
 		return x + width / 2;
 	}
 	
-	// This card has one or two little ancestors above.
-	// Adapt both for shared ancestry and for spouse ancestry
+	// This card can have one or two little ancestors above (shared ancestry or spouse ancestry)
 	public boolean hasAncestry() {
 		return origin instanceof AncestryNode && (((AncestryNode)origin).miniFather != null || ((AncestryNode)origin).miniMother != null);
 	}

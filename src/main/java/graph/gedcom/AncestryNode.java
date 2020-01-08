@@ -4,7 +4,7 @@ import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
 
-public final class AncestryNode extends Node {
+public class AncestryNode extends Node {
 
 	public MiniCard miniFather, miniMother;
 	private Gedcom gedcom;
@@ -78,10 +78,10 @@ public final class AncestryNode extends Node {
 	public String toString() {
 		String str = "";
 		if (miniFather != null)
-			str += miniFather.ancestry;
+			str += miniFather.amount;
 		str += " - ";
 		if (miniMother != null)
-			str += miniMother.ancestry;
+			str += miniMother.amount;
 		return str;
 	}
 }
