@@ -1,16 +1,13 @@
 package graph.gedcom;
 
-import java.util.List;
-
 public abstract class Node {
 	
 	public int x, y, width, height;
 	public Group guardGroup; // The group to which this node belongs as guardian
-	//TODO public List<Card> babies;
+	int branch; // 0 doesn't matter, 1 husband, 2 wife
 
-	public abstract int centerX();
+	abstract int centerX();
 	
-	abstract int centerXrel();
-	
-	
+	abstract int centerRelX();
+
 }

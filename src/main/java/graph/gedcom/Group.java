@@ -12,28 +12,13 @@ public class Group {
 	public Group(Node guardian) {
 		this.guardian = guardian;
 		guardian.guardGroup = this;
-		this.youths = new ArrayList<>();
+		youths = new ArrayList<>();
 	}
 	
-	@Deprecated
-	public Node getGuardian() {
-		return guardian;
-	}
-	
-	@Deprecated
-	void setGuardian(Node node) {
-		guardian = node;
-	}
-	
-	public UnitNode getYouth(int index ) {
+	public UnitNode getYouth(int index) {
 		return youths.size() > 0 ? youths.get(index) : null;
 	}
 	
-	@Deprecated
-	public List<UnitNode> getYouths() {
-		return youths;
-	}
-
 	void addYoung(UnitNode node, boolean beginning) {
 		if(beginning)
 			youths.add(0, node);
@@ -41,18 +26,13 @@ public class Group {
 			youths.add(node);
 	}
 
-	// Center of youths excluding acquired spouses
-	// TODO Non funziona se ci sono multimatrimoni sia maschili che femminili
-	int centerX() {
-		int leftX = getYouth(0).getMainCard().centerX();
-		return leftX + ( getYouth(youths.size()-1).getMainCard().centerX() - leftX ) / 2;
-	}
-	
-	// Branch 1 for husband, 2 for wife
+	// Center of youths excluding acquired spouses: branch 1 for husband, 2 for wife, 0 doesn't matter
+	// Doesn't apply to multi marriages
 	int centerX(int branch) {
-		if (branch == 1)
-			return centerX();
-		else if (branch == 2) {
+		if (branch == 0 || branch == 1) {
+			int leftX = getYouth(0).getMainCard().centerX();
+			return leftX + ( getYouth(youths.size()-1).getMainCard().centerX() - leftX ) / 2;
+		} else if (branch == 2) {
 			int leftX = getYouth(0).getCard(2).centerX();
 			if (youths.size() > 1)
 				return leftX + ( getYouth(youths.size()-1).getMainCard().centerX() - leftX ) / 2;
@@ -67,7 +47,7 @@ public class Group {
 		if (youths.size() > 1) {
 			int w = 0;
 			for (int i=0; i < youths.size(); i++) {
-				UnitNode node = youths.get(i);			
+				UnitNode node = youths.get(i);
 				if(i == 0)
 					w += node.getMainWidth(true);
 				else if(i == youths.size() - 1)
@@ -83,21 +63,12 @@ public class Group {
 		return 0;
 	}
 	
-	int getArcWidth(int branch) {
-		if (branch == 1) // Husband ascendant group
-			return youths.get(youths.size()-1).getCard(1).centerX() - youths.get(0).getMainCard().centerX();
-		else if (branch == 2) // Wife ascendant group 
-			return youths.get(youths.size()-1).getMainCard().centerX() - youths.get(0).getCard(2).centerX();
-		else // Descendant group
-			return youths.get(youths.size()-1).getMainCard().centerX() - youths.get(0).getMainCard().centerX();
-	}
-	
 	public String toString() {
-		String str = "...";
+		String str = "";
 		if( guardian != null )
 			str = guardian.toString();
-		for (UnitNode young : youths) {
-			str += "\n\t" + young.toString();
+		for (UnitNode youth : youths) {
+			str += "\n\t" + youth;
 		}
 		return str;
 	}

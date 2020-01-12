@@ -13,7 +13,7 @@ public class Graph {
 
 	public int width, height;
 	private Gedcom gedcom;
-	// Public settings with default values
+	// Settings for public methods with default values
 	private int whichFamily; // Which family display if the fulcrum is child in more than one family
 	private int ancestorGenerations = 2; // Generations to display
 	private int uncleGenerations = 1; // Can't be more than ancestor generations
@@ -21,26 +21,23 @@ public class Graph {
 	private boolean withSiblings = true;
 	private List<List<Node>> nodeRows; // A list of lists of all the nodes
 	private Set<Node> nodes;
-	private Set<Card> cards;
 	private Set<Line> lines;
-	UnitNode fulcrumNode;
-	Group baseGroup; // In which fulcrum is one of the children (youth)
-	int fulcrumRow; // Number of row in nodeRows where is fulcrum
+	private UnitNode fulcrumNode;
+	private Group baseGroup; // In which fulcrum is one of the children (youth)
+	private int fulcrumRow; // Number of row in nodeRows where is fulcrum
+	private int negativeHorizontal; // Max shift to the left of the graph
 
 	public Graph(Gedcom gedcom) {
 		this.gedcom = gedcom;
 		nodeRows = new ArrayList<>();
 		nodes = new HashSet<>();
-		cards = new HashSet<>();
 		lines = new HashSet<>();
-		
 	}
 
-	// Options
+	// Public methods
 
 	/**
-	 * If the fulcrum is child in more than one family, you can choose wich family
-	 * to display.
+	 * If the fulcrum is child in more than one family, you can choose wich family to display.
 	 * 
 	 * @param num The number of the family (0 if fulcrum has only one family)
 	 * @return The diagram, just for methods concatenation
@@ -93,7 +90,6 @@ public class Graph {
 		baseGroup = null;
 		nodeRows.clear();
 		nodes.clear();
-		cards.clear();
 		lines.clear();
 		width = 0;
 		height = 0;
@@ -158,24 +154,19 @@ public class Graph {
 		}
 
 		// All the nodes are stored in a set of nodes
-		// All the cards are stored in a set of cards
 		for (List<Node> row : nodeRows) {
-			for (Node n : row) {
-				nodes.add(n);
-				if (n instanceof UnitNode) {
-					UnitNode node = (UnitNode) n;
-					if (node.husband != null)
-						cards.add(node.husband);
-					if (node.wife != null)
-						cards.add(node.wife);
-					// Also the progeny node and the progeny mini cards
-					ProgenyNode progeny = node.progeny;
-					if (progeny != null) {
-						nodes.add(progeny);
-						for( MiniCard miniCard : progeny.miniChildren ) {
-							cards.add(miniCard);
-						}
-					}
+			for (Node node : row) {
+				nodes.add(node);
+				if (node instanceof UnitNode) {
+					// Also the ancestry nodes for acquired spouses 
+					UnitNode unitNode = (UnitNode) node;
+					if(unitNode.husband != null && unitNode.husband.acquired && unitNode.husband.hasAncestry())
+						nodes.add(unitNode.husband.origin);
+					if(unitNode.wife != null && unitNode.wife.acquired && unitNode.wife.hasAncestry())
+						nodes.add(unitNode.wife.origin);
+					// Also the progeny nodes
+					if (unitNode.progeny != null)
+						nodes.add(unitNode.progeny);
 				}
 			}
 		}
@@ -233,7 +224,8 @@ public class Graph {
 				}
 			}
 		} else { // Fulcrum has no marriages
-			baseGroup.addYoung(fulcrumNode, false);
+			if (baseGroup != null)
+				baseGroup.addYoung(fulcrumNode, false);
 			nodeRows.get(fulcrumRow).add(fulcrumNode);
 		}
 	}
@@ -260,6 +252,7 @@ public class Graph {
 					parentNode = new UnitNode(gedcom, family);
 				else
 					parentNode = new AncestryNode(gedcom, commonNode.getCard(branch));
+				parentNode.branch = branch;
 				Group group = new Group(parentNode); // In which commonNode is youth
 				commonNode.getCard(branch).origin = parentNode;
 
@@ -343,15 +336,11 @@ public class Graph {
 		}
 	}
 
-	/**
-	 * Set x and y coordinates for each {@link #Card}.
-	 */
+	// Set x and y coordinates for each node
 	public void arrange() {
 
 		// Array with max height of each row of nodes
 		int[] rowMaxHeight = new int[nodeRows.size()];
-		// Max shift to the left of the graph
-		int negativeHorizontal = 0;
 
 		// Let every unit node calculate its own size (width and height) from the size of its cards
 		for (List<Node> row : nodeRows) {
@@ -375,186 +364,188 @@ public class Graph {
 				posY += rowMaxHeight[nodeRows.indexOf(row)] / 2 + Util.SPACE
 						+ rowMaxHeight[nodeRows.indexOf(row) + 1] / 2;
 		}
-		height = posY + rowMaxHeight[rowMaxHeight.length - 1] / 2 + Util.GAP;
 
-		/**
-		 * Horizontal arrangement of all the nodes
-		 */
-		// Starting from the fulcrum generation
+		height = posY + rowMaxHeight[rowMaxHeight.length - 1] / 2 + Util.GAP;
+		negativeHorizontal = 0;
+
+		// Horizontal arrangement of all the nodes, starting from the fulcrum generation
 		int posX = 0;
 		if (baseGroup != null) {
+			// Fulcrum generation
 			for (UnitNode youth : baseGroup.youths) {
 				youth.x = posX;
 				posX += youth.width + Util.PADDING;
-				setCardCoordinates(youth);
-				arrangeYouths(youth);
+				youth.positionCards();
 			}
+			correctRow(fulcrumRow);
 			// Center horizontaly the parents in between of the children
 			Node guardian = baseGroup.guardian;
 			if (guardian != null) {
-				guardian.x = baseGroup.centerX() - guardian.centerXrel();
+				guardian.x = baseGroup.centerX(0) - guardian.centerRelX();
 				if (guardian instanceof UnitNode) {
-					setCardCoordinates((UnitNode) guardian);
-					// Call recoursive methods for ancestors
+					((UnitNode) guardian).positionCards();
 					arrangeHusbandGroup((UnitNode) guardian);
 					arrangeWifeGroup((UnitNode) guardian);
 				}
 			}
 		} else
-			arrangeYouths(fulcrumNode);
-
-		// Horizontal correction of overlapping nodes, from bottom to top
-		//for (List<Node> row : nodeRows) {
-		for (int r = nodeRows.size()-1; r >= 0; r--) {
-			List<Node> row = nodeRows.get(r);
-			
-				// Find center, the row watershed which doesn't move
-				Node center = null;
-				if (r == fulcrumRow) // Fulcrum row
-					center = fulcrumNode;
-				else
-					for (Node node : row)
-						if (node.x > fulcrumNode.x) {
-							center = node;
-							break;
+			correctRow(fulcrumRow);
+		
+		// Positioning the ancestors
+		for (int r = fulcrumRow-1; r >= 0; r--) {
+			for (Node node : nodeRows.get(r)) {
+				if (node instanceof UnitNode) {
+					UnitNode unitNode = (UnitNode) node;
+					Node guardian = unitNode.husbandGroup != null ? unitNode.husbandGroup.guardian : null;
+					if (guardian != null) {
+						guardian.x = unitNode.husbandGroup.centerX(1) - guardian.centerRelX();
+						if (guardian instanceof UnitNode) {
+							((UnitNode)guardian).positionCards();
+							arrangeHusbandGroup((UnitNode) guardian);
+							arrangeWifeGroup((UnitNode) guardian);
 						}
-				if (center == null)
-					center = row.get(row.size()-1);
-				posX = center.x + center.width + Util.PADDING;
-				if (center.x < negativeHorizontal) negativeHorizontal = center.x;
-				if (posX > width) width = posX;
-				// Nodes to the right of center shift to right
-				for (int i = row.indexOf(center)+1; i < row.size(); i++) {
-					Node node = row.get(i);
-					if (node.x < posX) {
-						node.x = posX;
 					}
-					posX = node.x + node.width + Util.PADDING;
-					if(node instanceof UnitNode) setCardCoordinates((UnitNode) node);
-					if (node.x < negativeHorizontal) negativeHorizontal = node.x;
-					if (posX > width) width = posX;
-				}
-				// Nodes to the left of center shift to left
-				posX = center.x;
-				for (int i = row.indexOf(center)-1; i >= 0; i--) {
-					Node node = row.get(i);
-					if (node.x + node.width + Util.PADDING > posX) {
-						node.x = posX - node.width - Util.PADDING;
-					}
-					posX = node.x;
-					if(node instanceof UnitNode) setCardCoordinates((UnitNode) node);
-					if (node.x < negativeHorizontal) negativeHorizontal = node.x;
-					if (posX > width) width = posX;
-				}
-			// Alignement of ancestry nodes in the first row
-			if(r == 0)
-				for(Node node : row) {
-					node.x = node.guardGroup.centerX() - node.centerXrel(); // TODO errato
-				}
-		}
-		width -= negativeHorizontal + Util.PADDING;
-
-		// Horizontal shift to the right of all the nodes
-		for (Node node : nodes) {
-			if(!(node instanceof ProgenyNode)) {
-				node.x -= negativeHorizontal;
-				if(node instanceof UnitNode) {
-					UnitNode nucleus = (UnitNode) node;
-					setCardCoordinates(nucleus);
-					// Final position for progeny nodes
-					ProgenyNode progeny = nucleus.progeny;
-					if (progeny != null) {
-						progeny.x = node.centerX() - progeny.width/2;
-						progeny.y = node.y + node.height + Util.GAP;
-						progeny.positionCards();
+					Node guardiana = unitNode.wifeGroup != null ? unitNode.wifeGroup.guardian : null;
+					if (guardiana != null) {
+						guardiana.x = unitNode.wifeGroup.centerX(2) - guardiana.centerRelX();
+						if (guardiana instanceof UnitNode) {
+							((UnitNode) guardiana).positionCards();
+							arrangeHusbandGroup((UnitNode) guardiana);
+							arrangeWifeGroup((UnitNode) guardiana);
+						}
 					}
 				}
 			}
+			correctRow(r-1);
+		}	
+		
+		// Positioning the descendants
+		for(int r = fulcrumRow; r < nodeRows.size(); r++) {
+			for (Node guardian : nodeRows.get(r)) {
+				if (guardian.guardGroup != null) {
+					posX = guardian.centerX() - guardian.guardGroup.getYouthWidth() / 2;
+					if(guardian.guardGroup.youths.size() > 0)
+						posX -= (guardian.guardGroup.getYouth(0).width - guardian.guardGroup.getYouth(0).getMainWidth(true));
+					for (UnitNode youth : guardian.guardGroup.youths) {
+						youth.x = posX;
+						posX += youth.width + Util.PADDING;
+					}
+				}
+			}
+			correctRow(r+1);
+		}
+		
+		// Positioning the progeny nodes and acquired ancestry nodes
+		for (Node node : nodes) {
+			if(node instanceof UnitNode) {
+				UnitNode unitNode = (UnitNode) node;
+				unitNode.positionCards();
+				ProgenyNode progeny = unitNode.progeny;
+				if (progeny != null) {
+					progeny.x = node.centerX() - progeny.width/2;
+					progeny.y = node.y + node.height + Util.GAP;
+					progeny.positionCards();
+					if (progeny.x < negativeHorizontal) negativeHorizontal = progeny.x;
+				}
+				arrangeAncestry(unitNode.husband);
+				arrangeAncestry(unitNode.wife);
+			}
+		}
+		
+		// Horizontal shift to the right of all the nodes
+		for (Node node : nodes) {
+			node.x -= negativeHorizontal;
+			if (node instanceof UnitNode)
+				((UnitNode) node).positionCards();
+			else if (node instanceof ProgenyNode)
+				((ProgenyNode) node).positionCards();
+			// Total width
+			if (node.x + node.width > width) width = node.x + node.width;
 		}
 		
 		// Create the Lines
-		for (Card card : cards) {
-			if (!card.acquired) // Acquired spouse don't need lines to ancestors
-				lines.add(new Line(card));
+		for (Node node : nodes) {
+			if (node instanceof UnitNode) {
+				UnitNode unitNode = (UnitNode) node;
+				if (unitNode.husband != null && !unitNode.husband.acquired)
+					lines.add(new Line(unitNode.husband));
+				if (unitNode.wife != null && !unitNode.wife.acquired)
+					lines.add(new Line(unitNode.wife));
+			} else if (node instanceof ProgenyNode) {
+				for( MiniCard miniCard : ((ProgenyNode) node).miniChildren )
+					lines.add(new Line(miniCard));
+			}
+		}
+	}
+	
+	void arrangeAncestry(IndiCard indiCard) {
+		if (indiCard != null && indiCard.acquired && indiCard.hasAncestry()) {
+			indiCard.origin.x = indiCard.centerX() - indiCard.origin.centerRelX();
+			indiCard.origin.y = indiCard.y - indiCard.origin.height;
 		}
 	}
 
-	// Set the absolute coordinates of the cards of a node, deducing from the absolute coordinates of this node.
-	private void setCardCoordinates(UnitNode node) {
-		node.positionCards();
-	}
-
-	// Recoursive methods to arrange horizontally youths and guardian of a group
-	// The group in which the husband is child
+	// Arrange horizontally the youths of the group in which the husband is child
 	private void arrangeHusbandGroup(UnitNode commonNode) {
 		Group group = commonNode.husbandGroup;
 		if (group != null) {
 			if (group.youths.size() > 1) {
-				int moveX = commonNode.x;
+				int posX = commonNode.x;
 				for (int i = group.youths.size() - 2; i >= 0; i--) {
-					UnitNode uncle = group.getYouth(i);
-					moveX -= (Util.PADDING + uncle.width);
-					uncle.x = moveX;
-					setCardCoordinates(uncle);
+					UnitNode uncleNode = group.getYouth(i);
+					posX -= (Util.PADDING + uncleNode.width);
+					uncleNode.x = posX;
+					uncleNode.positionCards();
+					if (posX < negativeHorizontal) negativeHorizontal = posX;
 				}
 			}
-			arrangeGuardian(group, 1);
 		}
 	}
 
-	// The group in which the wife is child
+	// And of the group in which the wife is child
 	private void arrangeWifeGroup(UnitNode commonNode) {
 		Group group = commonNode.wifeGroup;
 		if (group != null) {
 			if (group.youths.size() > 1) {
-				int moveX = commonNode.x + commonNode.width + Util.PADDING;
+				int posX = commonNode.x + commonNode.width + Util.PADDING;
 				for (int i = 1; i < group.youths.size(); i++) {
-					UnitNode uncle = group.getYouth(i);
-					uncle.x = moveX;
-					moveX += uncle.width + Util.PADDING;
-					setCardCoordinates(uncle);
+					UnitNode uncleNode = group.getYouth(i);
+					uncleNode.x = posX;
+					posX += uncleNode.width + Util.PADDING;
+					uncleNode.positionCards();
 				}
 			}
-			arrangeGuardian(group, 2);
 		}
 	}
 
-	/**
-	 * Common conclusion for above 2 methods.
-	 * 
-	 * @param group  The group of which we want to arrange horizontally the guardian
-	 * @param branch 1 if the child is a husband, 2 if the child is a wife
-	 */
-	private void arrangeGuardian(Group group, int branch) {
-		Node guardian = group.guardian;
-		if (guardian != null) {
-			/*if (group.getYouths().size() > 1) {
-				if (branch == 1) // Husband branch
-					guardian.x = group.getYouth(0).getMainCard().centerX() + group.getArcWidth(branch) / 2 - guardian.centerX();
-				else if (branch == 2) // Wife branch
-					guardian.x = group.getYouth(0).getCard(2).centerX() + group.getArcWidth(branch) / 2 - guardian.centerX();
-			} else // Only one child
-				guardian.x = group.getYouth(0).getCard(branch).centerX() - guardian.centerX();*/
-			guardian.x = group.centerX(branch) - guardian.centerXrel();
-			if (guardian instanceof UnitNode) {
-				setCardCoordinates((UnitNode) guardian);
-				arrangeHusbandGroup((UnitNode) guardian);
-				arrangeWifeGroup((UnitNode) guardian);
+	// Horizontal correction of overlapping nodes in one row
+	private void correctRow(int rowNum) {
+		if(rowNum >= 0 && rowNum < nodeRows.size()) {
+			List<Node> row = nodeRows.get(rowNum);
+			int center = row.size()/2;
+			Node centerNode = row.get(center);
+			int posX = centerNode.x + centerNode.width + Util.PADDING;
+			if (centerNode.x < negativeHorizontal) negativeHorizontal = centerNode.x;
+			// Nodes to the right of center shift to right
+			for (int i = center+1; i < row.size(); i++) {
+				Node node = row.get(i);
+				if (node.x < posX) {
+					node.x = posX;
+				}
+				posX = node.x + node.width + Util.PADDING;
+				if(node instanceof UnitNode) ((UnitNode) node).positionCards();
+				if (node.x < negativeHorizontal) negativeHorizontal = node.x;
 			}
-		}
-	}
-
-	// Recoursive method for horizontal position of the descendants
-	private void arrangeYouths(UnitNode guardian) {
-		if (guardian.guardGroup != null) {
-			int moveX = guardian.centerX() - guardian.guardGroup.getYouthWidth() / 2;
-			if(guardian.guardGroup.youths.size() > 0)
-				moveX -= (guardian.guardGroup.getYouth(0).width - guardian.guardGroup.getYouth(0).getMainWidth(true));
-			for (UnitNode youth : guardian.guardGroup.youths) {
-				youth.x = moveX;
-				moveX += youth.width + Util.PADDING;
-				//setCardCoordinates(youth);
-				arrangeYouths(youth);
+			// Nodes to the left of center shift to left
+			posX = centerNode.x;
+			for (int i = center-1; i >= 0; i--) {
+				Node node = row.get(i);
+				if (node.x + node.width + Util.PADDING > posX) {
+					node.x = posX - node.width - Util.PADDING;
+				}
+				posX = node.x;
+				if(node instanceof UnitNode) ((UnitNode) node).positionCards();
+				if (node.x < negativeHorizontal) negativeHorizontal = node.x;
 			}
 		}
 	}

@@ -15,7 +15,8 @@ public class UnitNode extends Node {
 	public IndiCard wife;
 	public String marriageDate;
 	public int bondWidth; // It dependes on marriageDate
-	public ProgenyNode progeny;
+	public ProgenyNode progeny; // The little children below
+	public Family family;
 	Group husbandGroup; // The group to which the husband of this node belongs as child
 	Group wifeGroup; // The group to which the wife of this node belongs as child
 	
@@ -78,6 +79,7 @@ public class UnitNode extends Node {
 	 * @param family
 	 */
 	public void init(Gedcom gedcom, Family family) {
+		this.family = family;
 		Person him = !family.getHusbandRefs().isEmpty() ? family.getHusbands(gedcom).get(0) : null;
 		if (him != null)
 			husband = new IndiCard(him);
@@ -164,7 +166,7 @@ public class UnitNode extends Node {
 
 	// If this unit has youths or progeny to display
 	public boolean hasChildren() {
-		return (guardGroup != null && !guardGroup.getYouths().isEmpty()) || progeny != null;
+		return (guardGroup != null && !guardGroup.youths.isEmpty()) || progeny != null;
 	}
 
 	// Calculate width and height of this node taking the dimensions of the cards
@@ -188,7 +190,7 @@ public class UnitNode extends Node {
 			husband.y = y + (height - husband.height) / 2;
 		}
 		if (isCouple()) {
-			wife.x = x + husband.width + bondWidth;// - (marriageDate != null ? Util.TIC * 2 : 0);
+			wife.x = x + husband.width + bondWidth - (marriageDate != null ? Util.TIC * 2 : 0);
 			wife.y = y + (height - wife.height) / 2;
 		} else if (wife != null) {
 			wife.x = x;
@@ -197,7 +199,7 @@ public class UnitNode extends Node {
 	}
 
 	@Override
-	public int centerXrel() {
+	public int centerRelX() {
 		if (isCouple())
 			return husband.width + bondWidth / 2 - (marriageDate != null ? Util.TIC : 0);
 		else if (husband != null)
@@ -207,17 +209,17 @@ public class UnitNode extends Node {
 		return 0;
 	}
 
-	public int centerYrel() {
+	public int centerRelY() {
 		return height / 2;
 	}
 
 	@Override
 	public int centerX() {
-		return x + centerXrel();
+		return x + centerRelX();
 	}
 
 	public int centerY() {
-		return y + centerYrel();
+		return y + centerRelY();
 	}
 	
 	// Useful to calculate the width of youths, excluding acquired spouses at the ends

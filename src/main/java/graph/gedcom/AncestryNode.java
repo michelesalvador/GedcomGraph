@@ -10,9 +10,11 @@ public class AncestryNode extends Node {
 	private Gedcom gedcom;
 	private int people;
 	public int horizontalCenter;
+	public boolean acquired; // Is this the ancestry of an acquired spouse (not blood relative)?
 
 	public AncestryNode(Gedcom gedcom, IndiCard card) {
 		this.gedcom = gedcom;
+		acquired = card.acquired;
 		Person person = card.person;
 		if (!person.getParentFamilies(gedcom).isEmpty()) {
 			Family family = person.getParentFamilies(gedcom).get(0);
@@ -49,29 +51,21 @@ public class AncestryNode extends Node {
 	}
 
 	@Override
+	public int centerRelX() {
+		return horizontalCenter;
+	}
+
+	public int centerRelY() {
+		return height / 2;
+	}
+
+	@Override
 	public int centerX() {
-		//return x + centerXrel();
 		return x + horizontalCenter;
 	}
 
 	public int centerY() {
 		return y + height / 2;
-	}
-
-	@Override
-	public int centerXrel() {
-		/*if (isCouple())
-			return foreFather.width + Util.GAP / 2;
-		else if (foreFather != null)
-			return width / 2;
-		else if (foreMother != null)
-			return width / 2;
-		return 0;*/
-		return horizontalCenter;
-	}
-
-	public int centerYrel() {
-		return height / 2;
 	}
 
 	@Override

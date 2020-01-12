@@ -15,7 +15,7 @@ public class IndiCard extends Card {
 	}
 
 	@Override
-	int centerXrel() {
+	int centerRelX() {
 		return width / 2;
 	}
 	

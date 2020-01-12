@@ -36,13 +36,13 @@ public class ProgenyNode extends Node {
 	}
 
 	@Override
-	public int centerX() {
-		return x + centerXrel();
+	public int centerRelX() {
+		return width / 2;
 	}
 
 	@Override
-	public int centerXrel() {
-		return width / 2;
+	public int centerX() {
+		return x + centerRelX();
 	}
 	
 	void positionCards() {

@@ -14,11 +14,11 @@ _GedcomGraph_ can receive some option to modify the tree output, but basically t
 
 ## Options
 
-At the moment you can choose to display:
+You can choose to display:
 - Number of generations of ancestors
 - Number of generations of descendants
-- ~~Number of generations of uncles~~
-- ~~Siblings~~
+- Number of generations of uncles
+- Siblings
 
 ## Package
 
@@ -51,20 +51,31 @@ In Android you have to do these steps:
 - Create a `graph.gedcom.Graph` instance, fed with the Gedcom object.
 	```java
 	Graph graph = new Graph(gedcom);
-- Pass to the graph some option, if you want.
+- Pass some option to the graph, if you want.
 	```java
-	graph.maxAncestors(3).showFamily(1);
+	graph.maxAncestors(3).maxUncles(2).displaySiblings(true).maxDescendants(3).showFamily(1);
 - Start the graph with the id of the fulcrum person.
 	```java
 	graph.startFrom("I1");
 - Add the cards to the Android layout.<br>
 Only after added to the layout it's possible to know the actual size of a card.
 	```java
-	(ToDo)
+	for(Node node : graph.getNodes()) {
+		if (node instanceof UnitNode)
+			box.addView(new GraphicUnitNode(getContext(), (UnitNode)node));
+		else if (node instanceof AncestryNode)
+			box.addView(new GraphicAncestry(getContext(), (AncestryNode)node, false));
+		else if (node instanceof ProgenyNode)
+			box.addView(new GraphicProgeny(getContext(), (ProgenyNode)node));
+	}
 - Pass to the graph width and height of all the cards.
+	```java
+	Todo...
 - Call `graph.arrange()` to make the graph calculate the position of all the cards.
 - Update the position of the cards on the layout.
 - Add the lines to the layout.
+
+You can find a complete Android implementation in [FamilyGem/.../Diagram.java](/michelesalvador/FamilyGem/blob/diagram/app/src/main/java/app/familygem/Diagram.java).
 
 ---
 

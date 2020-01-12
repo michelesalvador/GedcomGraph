@@ -8,6 +8,4 @@ abstract class Card extends Node {
 	public Node origin; // The node of parent(s) from which this person was born
 	public boolean acquired; // Is this person acquired spouse (not blood relative)?
 	
-	//TODO Node container; // Unit, ancestry or progeny node to which this card belongs
-
 }

@@ -12,7 +12,7 @@ public class MiniCard extends Card {
 	}
 
 	@Override
-	int centerXrel() {
+	int centerRelX() {
 		return width / 2;
 	}
 
