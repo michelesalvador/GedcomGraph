@@ -28,12 +28,12 @@ public class Group {
 
 	// Center of youths excluding acquired spouses: branch 1 for husband, 2 for wife, 0 doesn't matter
 	// Doesn't apply to multi marriages
-	int centerX(int branch) {
+	float centerX(int branch) {
 		if (branch == 0 || branch == 1) {
-			int leftX = getYouth(0).getMainCard().centerX();
+			float leftX = getYouth(0).getMainCard().centerX();
 			return leftX + ( getYouth(youths.size()-1).getMainCard().centerX() - leftX ) / 2;
 		} else if (branch == 2) {
-			int leftX = getYouth(0).getCard(2).centerX();
+			float leftX = getYouth(0).getCard(2).centerX();
 			if (youths.size() > 1)
 				return leftX + ( getYouth(youths.size()-1).getMainCard().centerX() - leftX ) / 2;
 			else
@@ -43,7 +43,7 @@ public class Group {
 	}
 	
 	// Youths width excluding acquired spouses at the ends
-	int getYouthWidth() {
+	float getYouthWidth() {
 		if (youths.size() > 1) {
 			int w = 0;
 			for (int i=0; i < youths.size(); i++) {

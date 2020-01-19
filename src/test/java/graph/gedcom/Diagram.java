@@ -19,12 +19,12 @@ public class Diagram {
 	Diagram() throws Exception {
 		
 		// Parse a Gedcom file
-		File file = new File("src/test/resources/single.ged");	
+		File file = new File("src/test/resources/tree.ged");	
 		Gedcom gedcom = new ModelParser().parseGedcom(file);
 		gedcom.createIndexes();
 
 		// Directly open a Json file
-		//String content = FileUtils.readFileToString(new File("src/test/resources/family.json"), "UTF-8");
+		//String content = FileUtils.readFileToString(new File("src/test/resources/tree.json"), "UTF-8");
 		//Gedcom gedcom = new JsonParser().fromJson(content);
 		
 		// Instantiate a graph
@@ -35,12 +35,12 @@ public class Diagram {
 		// This list represents the graphic layout
 		List<GraphicNode> graphicNodes = new ArrayList<>();
 		
-		// Put all concrete cards into the layout
+		// Put all graphic cards into the layout
 		for (Node node : graph.getNodes()) {
 			graphicNodes.add(new GraphicNode(node));
 		}
 		
-		// Get the dimensions of each concrete card and pass them back to each corresponding card
+		// Get the dimensions of each graphic card and pass them back to each corresponding card
 		for (GraphicNode graphicNode : graphicNodes) {
 			for(GraphicCard graphicCard : graphicNode.graphicCards) {
 				graphicCard.card.width = graphicNode.node.toString().length() * 6 + 20;

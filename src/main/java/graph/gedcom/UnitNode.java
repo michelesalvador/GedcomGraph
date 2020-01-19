@@ -14,7 +14,7 @@ public class UnitNode extends Node {
 	public IndiCard husband;
 	public IndiCard wife;
 	public String marriageDate;
-	public int bondWidth; // It dependes on marriageDate
+	public float bondWidth; // It dependes on marriageDate
 	public ProgenyNode progeny; // The little children below
 	public Family family;
 	Group husbandGroup; // The group to which the husband of this node belongs as child
@@ -199,7 +199,7 @@ public class UnitNode extends Node {
 	}
 
 	@Override
-	public int centerRelX() {
+	public float centerRelX() {
 		if (isCouple())
 			return husband.width + bondWidth / 2 - (marriageDate != null ? Util.TIC : 0);
 		else if (husband != null)
@@ -209,21 +209,21 @@ public class UnitNode extends Node {
 		return 0;
 	}
 
-	public int centerRelY() {
+	public float centerRelY() {
 		return height / 2;
 	}
 
 	@Override
-	public int centerX() {
+	public float centerX() {
 		return x + centerRelX();
 	}
 
-	public int centerY() {
+	public float centerY() {
 		return y + centerRelY();
 	}
 	
 	// Useful to calculate the width of youths, excluding acquired spouses at the ends
-	int getMainWidth(boolean first) {
+	float getMainWidth(boolean first) {
 		IndiCard mainCard = getMainCard();
 		if(first) {
 			if(mainCard.equals(wife))

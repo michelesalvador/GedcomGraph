@@ -15,12 +15,12 @@ public class IndiCard extends Card {
 	}
 
 	@Override
-	int centerRelX() {
+	float centerRelX() {
 		return width / 2;
 	}
 	
 	@Override
-	public int centerX() {
+	public float centerX() {
 		return x + width / 2;
 	}
 	

@@ -9,7 +9,7 @@ public class AncestryNode extends Node {
 	public MiniCard miniFather, miniMother;
 	private Gedcom gedcom;
 	private int people;
-	public int horizontalCenter;
+	public float horizontalCenter;
 	public boolean acquired; // Is this the ancestry of an acquired spouse (not blood relative)?
 
 	public AncestryNode(Gedcom gedcom, IndiCard card) {
@@ -51,20 +51,20 @@ public class AncestryNode extends Node {
 	}
 
 	@Override
-	public int centerRelX() {
+	public float centerRelX() {
 		return horizontalCenter;
 	}
 
-	public int centerRelY() {
+	public float centerRelY() {
 		return height / 2;
 	}
 
 	@Override
-	public int centerX() {
+	public float centerX() {
 		return x + horizontalCenter;
 	}
 
-	public int centerY() {
+	public float centerY() {
 		return y + height / 2;
 	}
 

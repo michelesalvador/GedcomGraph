@@ -2,7 +2,7 @@ package graph.gedcom;
 
 public class Line {
 
-	public int x1, y1, x2, y2;
+	public float x1, y1, x2, y2;
 
 	public Line( Card card ) {
 		Node origin = card.origin;

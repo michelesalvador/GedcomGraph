@@ -11,7 +11,7 @@ import static graph.gedcom.Util.pr;
 
 public class Graph {
 
-	public int width, height;
+	public float width, height;
 	private Gedcom gedcom;
 	// Settings for public methods with default values
 	private int whichFamily; // Which family display if the fulcrum is child in more than one family
@@ -25,7 +25,7 @@ public class Graph {
 	private UnitNode fulcrumNode;
 	private Group baseGroup; // In which fulcrum is one of the children (youth)
 	private int fulcrumRow; // Number of row in nodeRows where is fulcrum
-	private int negativeHorizontal; // Max shift to the left of the graph
+	private float negativeHorizontal; // Max shift to the left of the graph
 
 	public Graph(Gedcom gedcom) {
 		this.gedcom = gedcom;
@@ -340,7 +340,7 @@ public class Graph {
 	public void arrange() {
 
 		// Array with max height of each row of nodes
-		int[] rowMaxHeight = new int[nodeRows.size()];
+		float[] rowMaxHeight = new float[nodeRows.size()];
 
 		// Let every unit node calculate its own size (width and height) from the size of its cards
 		for (List<Node> row : nodeRows) {
@@ -354,22 +354,21 @@ public class Graph {
 		}
 
 		// Vertical arrangement of all the nodes
-		int posY = rowMaxHeight[0] / 2;
+		float posY = rowMaxHeight[0] / 2;
 		for (List<Node> row : nodeRows) {
 			for (Node node : row) {
 				node.y = posY - node.height / 2;
 			}
 			// Update vertical position for the next row
 			if (nodeRows.indexOf(row) < nodeRows.size() - 1)
-				posY += rowMaxHeight[nodeRows.indexOf(row)] / 2 + Util.SPACE
-						+ rowMaxHeight[nodeRows.indexOf(row) + 1] / 2;
+				posY += rowMaxHeight[nodeRows.indexOf(row)] / 2 + Util.SPACE + rowMaxHeight[nodeRows.indexOf(row) + 1] / 2;
 		}
 
-		height = posY + rowMaxHeight[rowMaxHeight.length - 1] / 2 + Util.GAP;
+		height = posY + rowMaxHeight[rowMaxHeight.length - 1] / 2;
 		negativeHorizontal = 0;
 
 		// Horizontal arrangement of all the nodes, starting from the fulcrum generation
-		int posX = 0;
+		float posX = 0;
 		if (baseGroup != null) {
 			// Fulcrum generation
 			for (UnitNode youth : baseGroup.youths) {
@@ -382,6 +381,7 @@ public class Graph {
 			Node guardian = baseGroup.guardian;
 			if (guardian != null) {
 				guardian.x = baseGroup.centerX(0) - guardian.centerRelX();
+				if (guardian.x < negativeHorizontal) negativeHorizontal = guardian.x;
 				if (guardian instanceof UnitNode) {
 					((UnitNode) guardian).positionCards();
 					arrangeHusbandGroup((UnitNode) guardian);
@@ -418,7 +418,7 @@ public class Graph {
 			}
 			correctRow(r-1);
 		}	
-		
+
 		// Positioning the descendants
 		for(int r = fulcrumRow; r < nodeRows.size(); r++) {
 			for (Node guardian : nodeRows.get(r)) {
@@ -434,8 +434,9 @@ public class Graph {
 			}
 			correctRow(r+1);
 		}
-		
+
 		// Positioning the progeny nodes and acquired ancestry nodes
+		boolean plusGap = false;
 		for (Node node : nodes) {
 			if(node instanceof UnitNode) {
 				UnitNode unitNode = (UnitNode) node;
@@ -446,11 +447,13 @@ public class Graph {
 					progeny.y = node.y + node.height + Util.GAP;
 					progeny.positionCards();
 					if (progeny.x < negativeHorizontal) negativeHorizontal = progeny.x;
+					plusGap = true;
 				}
 				arrangeAncestry(unitNode.husband);
 				arrangeAncestry(unitNode.wife);
 			}
 		}
+		height += plusGap ? Util.GAP : 0;
 		
 		// Horizontal shift to the right of all the nodes
 		for (Node node : nodes) {
@@ -490,7 +493,7 @@ public class Graph {
 		Group group = commonNode.husbandGroup;
 		if (group != null) {
 			if (group.youths.size() > 1) {
-				int posX = commonNode.x;
+				float posX = commonNode.x;
 				for (int i = group.youths.size() - 2; i >= 0; i--) {
 					UnitNode uncleNode = group.getYouth(i);
 					posX -= (Util.PADDING + uncleNode.width);
@@ -507,7 +510,7 @@ public class Graph {
 		Group group = commonNode.wifeGroup;
 		if (group != null) {
 			if (group.youths.size() > 1) {
-				int posX = commonNode.x + commonNode.width + Util.PADDING;
+				float posX = commonNode.x + commonNode.width + Util.PADDING;
 				for (int i = 1; i < group.youths.size(); i++) {
 					UnitNode uncleNode = group.getYouth(i);
 					uncleNode.x = posX;
@@ -524,7 +527,7 @@ public class Graph {
 			List<Node> row = nodeRows.get(rowNum);
 			int center = row.size()/2;
 			Node centerNode = row.get(center);
-			int posX = centerNode.x + centerNode.width + Util.PADDING;
+			float posX = centerNode.x + centerNode.width + Util.PADDING;
 			if (centerNode.x < negativeHorizontal) negativeHorizontal = centerNode.x;
 			// Nodes to the right of center shift to right
 			for (int i = center+1; i < row.size(); i++) {

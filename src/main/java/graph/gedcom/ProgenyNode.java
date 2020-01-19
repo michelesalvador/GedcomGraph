@@ -36,17 +36,17 @@ public class ProgenyNode extends Node {
 	}
 
 	@Override
-	public int centerRelX() {
+	public float centerRelX() {
 		return width / 2;
 	}
 
 	@Override
-	public int centerX() {
+	public float centerX() {
 		return x + centerRelX();
 	}
 	
 	void positionCards() {
-		int posX = x;
+		float posX = x;
 		for(MiniCard card : miniChildren) {
 			card.x = posX;
 			card.y = y;

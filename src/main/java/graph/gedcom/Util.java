@@ -5,12 +5,12 @@ import org.folg.gedcom.model.Person;
 
 public class Util {
 	
-	public static int PADDING = 25; // Horizontal space between nodes
-	public static int MARGIN = 30; // Standard space between husband and wife
-	public static int SPACE = 180; // Vertical space between rows of cards
-	public static int TIC = 15; // Horizontal overlap of the marriage year over the cards
-	public static int GAP = 40; // Vertical space between unit and progeny
-	public static int PLAY = 30; // Horizontal space between progeny mini cards
+	public static int PADDING = 15; // Horizontal space between nodes
+	public static int MARGIN = 25; // Standard space between husband and wife
+	public static int SPACE = 100; // Vertical space between rows of cards
+	public static int TIC = 7; // Horizontal overlap of the marriage year over the cards
+	public static int GAP = 30; // Vertical space between unit and progeny
+	public static int PLAY = 10; // Horizontal space between progeny mini cards
 
 	/**
 	 * Utility to know the sex of a person.
