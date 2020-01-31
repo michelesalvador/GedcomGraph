@@ -28,10 +28,10 @@ public class UnitNode extends Node {
 		// Couple
 		List<Family> families = person.getSpouseFamilies(gedcom);
 		if (!families.isEmpty()) {
-			// Usually displays the last marriage of a person
-			// One wife with multi marriages appears as indi card just in the fulcrum node, asterisk before 
+			// Usually the last marriage of a person is displayed
 			int whichMarriage = families.size() - 1;
-			if (thisIsFulcrumNode && families.size() > 1 && person == families.get(0).getHusbands(gedcom).get(0))
+			// One husband with multi marriages appears as indi card just in the fulcrum node, asterisk afterwards 
+			if (thisIsFulcrumNode && families.size() > 1 && !families.get(0).getHusbands(gedcom).isEmpty() && person == families.get(0).getHusbands(gedcom).get(0))
 				whichMarriage = 0;
 			Family family = families.get(whichMarriage);
 			init(gedcom, family);
@@ -95,10 +95,12 @@ public class UnitNode extends Node {
 
 	// Complete the definition of the acquired spouse
 	void defineSpouse(Gedcom gedcom, IndiCard card) {
-		card.acquired = true;
-		AncestryNode ancestry = new AncestryNode(gedcom, card);
-		if(ancestry.miniFather != null || ancestry.miniMother != null)
-			card.origin = ancestry;
+		if (card != null) {
+			card.acquired = true;
+			AncestryNode ancestry = new AncestryNode(gedcom, card);
+			if(ancestry.miniFather != null || ancestry.miniMother != null)
+				card.origin = ancestry;
+		}
 	}
 
 	/**

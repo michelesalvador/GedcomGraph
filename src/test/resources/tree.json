@@ -1,0 +1,515 @@
+{
+  "families": [
+    {
+      "childRefs": [
+        {
+          "ref": "I3"
+        }
+      ],
+      "husbandRefs": [
+        {
+          "ref": "I1"
+        }
+      ],
+      "id": "F1",
+      "wifeRefs": [
+        {
+          "ref": "I2"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "21:09:19",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      }
+    },
+    {
+      "childRefs": [
+        {
+          "ref": "I5"
+        },
+        {
+          "ref": "I6"
+        },
+        {
+          "ref": "I7"
+        }
+      ],
+      "husbandRefs": [
+        {
+          "ref": "I3"
+        }
+      ],
+      "id": "F2",
+      "wifeRefs": [
+        {
+          "ref": "I4"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "21:26:27",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      }
+    },
+    {
+      "childRefs": [
+        {
+          "ref": "I8"
+        }
+      ],
+      "husbandRefs": [
+        {
+          "ref": "I6"
+        }
+      ],
+      "id": "F3",
+      "chan": {
+        "date": {
+          "time": "21:10:53",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      }
+    },
+    {
+      "childRefs": [
+        {
+          "ref": "I9"
+        },
+        {
+          "ref": "I10"
+        },
+        {
+          "ref": "I11"
+        }
+      ],
+      "husbandRefs": [
+        {
+          "ref": "I7"
+        }
+      ],
+      "id": "F4",
+      "chan": {
+        "date": {
+          "time": "21:11:42",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      }
+    },
+    {
+      "childRefs": [],
+      "husbandRefs": [
+        {
+          "ref": "I5"
+        }
+      ],
+      "id": "F5",
+      "chan": {
+        "date": {
+          "time": "21:35:41",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      }
+    }
+  ],
+  "head": {
+    "charset": {
+      "value": "UTF-8"
+    },
+    "file": "2.json",
+    "gedc": {
+      "form": "LINEAGE-LINKED",
+      "vers": "5.5.1"
+    },
+    "lang": "English",
+    "sour": {
+      "name": "NRC Help",
+      "value": "FAMILY_ECHO",
+      "vers": "0.7.0"
+    },
+    "submRef": "U1"
+  },
+  "people": [
+    {
+      "fams": [
+        {
+          "ref": "F1"
+        }
+      ],
+      "id": "I1",
+      "names": [
+        {
+          "value": "Abcdef //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:55:19",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ],
+      "extensions": {
+        "famili": 2
+      }
+    },
+    {
+      "fams": [
+        {
+          "ref": "F1"
+        }
+      ],
+      "id": "I2",
+      "names": [
+        {
+          "value": "Wife Abcd //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:55:32",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "F"
+        }
+      ],
+      "extensions": {
+        "famili": 2
+      }
+    },
+    {
+      "famc": [
+        {
+          "ref": "F1"
+        }
+      ],
+      "fams": [
+        {
+          "ref": "F2"
+        }
+      ],
+      "id": "I3",
+      "names": [
+        {
+          "value": "Xyz //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:55:43",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ],
+      "extensions": {
+        "famili": 6
+      }
+    },
+    {
+      "fams": [
+        {
+          "ref": "F2"
+        }
+      ],
+      "id": "I4",
+      "names": [
+        {
+          "value": "Xyz Wife //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:55:54",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "F"
+        }
+      ],
+      "extensions": {
+        "famili": 4
+      }
+    },
+    {
+      "famc": [
+        {
+          "ref": "F2"
+        }
+      ],
+      "fams": [
+        {
+          "ref": "F5"
+        }
+      ],
+      "id": "I5",
+      "names": [
+        {
+          "value": "Prq Bro 1 //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:56:32",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ],
+      "extensions": {
+        "famili": 4
+      }
+    },
+    {
+      "famc": [
+        {
+          "ref": "F2"
+        }
+      ],
+      "fams": [
+        {
+          "ref": "F3"
+        }
+      ],
+      "id": "I6",
+      "names": [
+        {
+          "value": "Pqr Bro 2 //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:56:43",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ],
+      "extensions": {
+        "famili": 5
+      }
+    },
+    {
+      "famc": [
+        {
+          "ref": "F2"
+        }
+      ],
+      "fams": [
+        {
+          "ref": "F4"
+        }
+      ],
+      "id": "I7",
+      "names": [
+        {
+          "value": "Prq Bro 3 //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "22:56:52",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ],
+      "extensions": {
+        "famili": 7
+      }
+    },
+    {
+      "famc": [
+        {
+          "ref": "F3"
+        }
+      ],
+      "id": "I8",
+      "names": [
+        {
+          "value": "Khaleel //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "21:10:53",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ]
+    },
+    {
+      "famc": [
+        {
+          "ref": "F4"
+        }
+      ],
+      "id": "I9",
+      "names": [
+        {
+          "value": "Fauz //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "21:11:16",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ]
+    },
+    {
+      "famc": [
+        {
+          "ref": "F4"
+        }
+      ],
+      "id": "I10",
+      "names": [
+        {
+          "value": "Saif //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "21:11:27",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ]
+    },
+    {
+      "famc": [
+        {
+          "ref": "F4"
+        }
+      ],
+      "id": "I11",
+      "names": [
+        {
+          "value": "Fazlu //"
+        }
+      ],
+      "chan": {
+        "date": {
+          "time": "21:11:42",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "eventsFacts": [
+        {
+          "tag": "SEX",
+          "value": "M"
+        }
+      ]
+    }
+  ],
+  "subms": [
+    {
+      "chan": {
+        "date": {
+          "time": "23:06:44",
+          "value": "13 NOV 2019"
+        },
+        "extensions": {
+          "zona": "Asia/Kolkata"
+        }
+      },
+      "id": "U1",
+      "name": ""
+    }
+  ]
+}

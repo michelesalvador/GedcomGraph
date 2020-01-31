@@ -19,13 +19,13 @@ public class Diagram {
 	Diagram() throws Exception {
 		
 		// Parse a Gedcom file
-		File file = new File("src/test/resources/tree.ged");	
+		File file = new File("src/test/resources/tree.ged");
 		Gedcom gedcom = new ModelParser().parseGedcom(file);
 		gedcom.createIndexes();
 
-		// Directly open a Json file
-		//String content = FileUtils.readFileToString(new File("src/test/resources/tree.json"), "UTF-8");
-		//Gedcom gedcom = new JsonParser().fromJson(content);
+		/* Directly open a Json file
+		String content = FileUtils.readFileToString(new File("src/test/resources/tree.json"), "UTF-8");
+		Gedcom gedcom = new JsonParser().fromJson(content);*/
 		
 		// Instantiate a graph
 		Graph graph = new Graph(gedcom);

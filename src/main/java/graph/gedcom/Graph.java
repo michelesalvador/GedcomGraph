@@ -200,9 +200,9 @@ public class Graph {
 				Family marriageFamily = spouseFamilies.get(i);
 				UnitNode marriageNode;
 				// Other marriages of fulcrum represented as an asterisk
-				if (i > 0 && fulcrum == marriageFamily.getHusbands(gedcom).get(0))
+				if (i > 0 && !marriageFamily.getHusbands(gedcom).isEmpty() && fulcrum == marriageFamily.getHusbands(gedcom).get(0))
 					marriageNode = new UnitNode(gedcom, marriageFamily, 1, descendantGenerations==0);
-				else if (i < spouseFamilies.size()-1 && fulcrum == marriageFamily.getWives(gedcom).get(0))
+				else if (i < spouseFamilies.size()-1 && !marriageFamily.getWives(gedcom).isEmpty() && fulcrum == marriageFamily.getWives(gedcom).get(0))
 					marriageNode = new UnitNode(gedcom, marriageFamily, 2, descendantGenerations==0);
 				else
 					marriageNode = fulcrumNode;
