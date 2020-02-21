@@ -11,7 +11,7 @@ You can find a simple implementation of _GedcomGraph_ made with Java AWT/Swing i
 
 _GedcomGraph_ is written in Java 1.7, so to be compatible with older versions of Android: it has been tested up to Android 4.4 KitKat.
 
-_GedcomGraph_ can receive some option to modify the tree output, but basically the tree has always the zero coordinates on top-left corner, the ancestors above and the descendants below, and the marriage year between spouses.
+_GedcomGraph_ can receive some option to modify the tree output, but basically the tree has always the zero coordinates on top-left corner, the ancestors above and the descendants below, and one single person as fulcrum.
 
 ## Options
 
@@ -25,16 +25,16 @@ You can choose to display:
 
 _GedcomGraph_ is a Maven project written with Eclipse.
 
-To generate the file `gedcomgraph-1.0.0.jar` you have to download the code and build the package in some way.
+To generate the file `gedcomgraph-1.1.0.jar` you have to download the code and build the package in some way.
 
-The package name is `graph.gedcom`, at this point definitive.
+The package name is `graph.gedcom`.
 
 ## Implementation
 
 After added the jar file to your project, in short you have to:
 1. Instantiate a graph.
 2. Place the cards on a canvas (e.g. an Android Layout).
-3. Make the graph aware of the actual size of the cards.
+3. Make the graph aware of the actual size of each card.
 4. Let the graph calculate the position of cards and lines.
 5. Place the cards in their position on the canvas.
 6. Add the lines.
@@ -59,7 +59,7 @@ In Android you have to do these steps:
 	```java
 	graph.startFrom("I1");
 - Add the cards to the Android layout.<br>
-Only after added to the layout it's possible to know the actual size of a card.
+Actually only after added to the layout it's possible to know the actual size of a card.
 	```java
 	for (Node node : graph.getNodes()) {
 		if (node instanceof UnitNode)
@@ -94,7 +94,7 @@ Only after added to the layout it's possible to know the actual size of a card.
 			graphicUnitNode.setLayoutParams( params );
 		}
 	}
-- Add the lines to the layout.
+- Finally add the lines to the layout.
 
 You can find a complete Android implementation in [/michelesalvador/FamilyGem/.../Diagram.java](https://github.com/michelesalvador/FamilyGem/blob/master/app/src/main/java/app/familygem/Diagram.java).
 

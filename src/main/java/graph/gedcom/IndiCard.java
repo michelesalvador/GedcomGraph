@@ -7,7 +7,7 @@ public class IndiCard extends Card {
 	public boolean dead;
 	public boolean asterisk;
 
-	public IndiCard( Person person) {
+	public IndiCard(Person person) {
 		this.person = person;
 		if(Util.dead(person)) {
 			dead = true;
