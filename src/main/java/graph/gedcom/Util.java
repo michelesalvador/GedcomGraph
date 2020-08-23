@@ -49,8 +49,9 @@ public class Util {
 	public static String essence(Person person) {
 		String str = "";
 		if (person != null) {
+			//str = person.getId() + " ";
 			if (!person.getNames().isEmpty())
-				str = person.getNames().get(0).getDisplayValue().replaceAll("/", "");
+				str += person.getNames().get(0).getDisplayValue().replaceAll("/", "");
 			// str += " " + person.hashCode();
 		}
 		return str;

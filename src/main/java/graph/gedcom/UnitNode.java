@@ -1,6 +1,5 @@
 package graph.gedcom;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -21,24 +20,29 @@ public class UnitNode extends Node {
 	Group husbandGroup; // The group to which the husband of this node belongs as child
 	Group wifeGroup; // The group to which the wife of this node belongs as child
 	
+	// Constructor starting from a person
 	public UnitNode(Gedcom gedcom, Person person, boolean withProgeny, Person fulcrum) {
 		// Couple
 		List<Family> families = person.getSpouseFamilies(gedcom);
 		if (!families.isEmpty()) {
-			// Usually the last marriage of a person is displayed
-			int whichMarriage = families.size() - 1;
-			// Fulcrum appears as indi card just in the first marriage (asterisk afterwards) 
-			if (person.equals(fulcrum))
-				whichMarriage = 0;
-			Family family = families.get(whichMarriage);
-			init(gedcom, family);
+			Family family;
+			// First marriage only for fulcrum in first fulcrum node
+			if (fulcrum == null) {
+				family = families.get(0);
+				init(gedcom, family, person);
+			} else { // Usually the last marriage of a person is displayed
+				family = families.get(families.size() - 1);
+				init(gedcom, family, fulcrum);
+			}
 			// Define the acquired spouse
-			if (isCouple()) {
-				if (person.equals(husband.person)) {
-					defineSpouse(gedcom, wife, fulcrum);
-				} else if (person.equals(wife.person)) {
-					defineSpouse(gedcom, husband, fulcrum);
-				}
+			if (husband != null && person.equals(husband.person)) {
+				defineSpouse(gedcom, wife, fulcrum);
+			} else if (wife != null && person.equals(wife.person)) {
+				defineSpouse(gedcom, husband, fulcrum);
+			}
+			// Restore fulcrum card not as asterisk
+			if (fulcrum == null) {
+				getMainCard().asterisk = false;
 			}
 			if (!family.getChildRefs().isEmpty() && withProgeny)
 				progeny = new ProgenyNode(gedcom, family, this);
@@ -51,23 +55,20 @@ public class UnitNode extends Node {
 			}
 		}
 	}
-	
-	public UnitNode(Gedcom gedcom, Family family) {
-		init(gedcom, family);
-	}
-	
-	// The asterisk version
-	public UnitNode(Gedcom gedcom, Family family, Person fulcrum) {
-		init(gedcom, family);
-		if (husband.person.equals(fulcrum)) {
-			husband.asterisk = true;
-			defineSpouse(gedcom, wife, fulcrum);
-		} else if(wife.person.equals(fulcrum)) {
-			wife.asterisk = true;
-			defineSpouse(gedcom, husband, fulcrum);
+
+	// Constructor for ancestors family and for multi marriages (after the first one)
+	public UnitNode(Gedcom gedcom, Family family, Person fulcrum, boolean followingMarriage) {
+		init(gedcom, family, fulcrum);
+		// For multi marriages only
+		if (followingMarriage) {
+			if (fulcrum.equals(husband.person)) {
+				defineSpouse(gedcom, wife, fulcrum);
+			} else if (fulcrum.equals(wife.person)) {
+				defineSpouse(gedcom, husband, fulcrum);
+			}
 		}
 	}
-
+	
 	/**
 	 * This method actually replaces the UnitNode constructor.
 	 * It takes the parent(s) from a family to create the indi cards.
@@ -75,31 +76,20 @@ public class UnitNode extends Node {
 	 * @param gedcom
 	 * @param family
 	 */
-	public void init(Gedcom gedcom, Family family) {
+	public void init(Gedcom gedcom, Family family, Person fulcrum) {
 		this.family = family;
-		// Gay family
-		if( family.getHusbandRefs().size() > 1 || family.getWifeRefs().size() > 1 ) {
-			// Create a list of all spouses alternating husbands and wives
-			List<Person> persons = new ArrayList<>();
-			for (Person husband : family.getHusbands(gedcom))
-				persons.add(husband);
-			int pos = persons.size() > 0 ? 1 : 0;
-			for (Person wife : family.getWives(gedcom)) {
-				persons.add(pos, wife);
-				pos += (persons.size() > pos+1) ? 2 : 1;
-			}
-			// Take the first two persons as husband and wife
-			if (persons.size() > 0)
-				husband = new IndiCard(persons.get(0));
-			if (persons.size() > 1)
-				wife = new IndiCard(persons.get(1));
-		} else { // Straight family
-			Person him = !family.getHusbandRefs().isEmpty() ? family.getHusbands(gedcom).get(0) : null;
-			if (him != null)
-				husband = new IndiCard(him);
-			Person her = !family.getWifeRefs().isEmpty() ? family.getWives(gedcom).get(0) : null;
-			if (her != null)
-				wife = new IndiCard(her);
+		// Take the first two persons as husband and wife
+		List<Person> parents = getParents(gedcom, family);
+		if (parents.size() > 0)
+			husband = new IndiCard(parents.get(0));
+		if (parents.size() > 1)
+			wife = new IndiCard(parents.get(1));
+		// Asterisks
+		if (husband != null && husband.person.equals(fulcrum)) {
+			husband.asterisk = true;
+		}
+		if (wife != null && wife.person.equals(fulcrum)) {
+			wife.asterisk = true;
 		}
 		// Gedcom date of the marriage
 		for (EventFact ef : family.getEventsFacts()) {
@@ -112,13 +102,9 @@ public class UnitNode extends Node {
 	void defineSpouse(Gedcom gedcom, IndiCard card, Person fulcrum) {
 		if (card != null) {
 			card.acquired = true;
-			if (card.person.equals(fulcrum)) { // The spouse is fulcrum (e.g. two siblings married)
-				card.asterisk = true;
-			} else { // Normal spouse
-				AncestryNode ancestry = new AncestryNode(gedcom, card);
-				if(ancestry.miniFather != null || ancestry.miniMother != null)
-					card.origin = ancestry;
-			}
+			AncestryNode ancestry = new AncestryNode(gedcom, card);
+			if(ancestry.miniFather != null || ancestry.miniMother != null)
+				card.origin = ancestry;
 		}
 	}
 
@@ -137,7 +123,7 @@ public class UnitNode extends Node {
 			return husband;
 		else if (wife != null)
 			return wife;
-		return null;		
+		return null;
 	}
 	
 	public IndiCard getSpouseCard() {
@@ -259,8 +245,8 @@ public class UnitNode extends Node {
 		}
 	}
 
-	// Simple solution to retrieve the marriage year. Family Gem uses another much
-	// more complex.
+	// Simple solution to retrieve the marriage year.
+	// Family Gem uses another much more complex.
 	public String marriageYear() {
 		String year = "";
 		if (marriageDate != null) {

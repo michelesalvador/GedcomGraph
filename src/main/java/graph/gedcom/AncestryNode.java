@@ -1,5 +1,6 @@
 package graph.gedcom;
 
+import java.util.List;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
@@ -17,16 +18,16 @@ public class AncestryNode extends Node {
 		acquired = card.acquired;
 		Person person = card.person;
 		if (!person.getParentFamilies(gedcom).isEmpty()) {
-			Family family = person.getParentFamilies(gedcom).get(0);
-			if (!family.getHusbands(gedcom).isEmpty()) {
+			List<Person> parents = getParents(gedcom, person.getParentFamilies(gedcom).get(0));
+			if (parents.size() > 0) {
 				people = 1;
-				countAncestors(family.getHusbands(gedcom).get(0));
-				miniFather = new MiniCard(family.getHusbands(gedcom).get(0), people);
+				countAncestors(parents.get(0));
+				miniFather = new MiniCard(parents.get(0), people);
 			}
-			if (!family.getWives(gedcom).isEmpty()) {
+			if (parents.size() > 1) {
 				people = 1;
-				countAncestors(family.getWives(gedcom).get(0));
-				miniMother = new MiniCard(family.getWives(gedcom).get(0), people);
+				countAncestors(parents.get(1));
+				miniMother = new MiniCard(parents.get(1), people);
 			}
 		}
 	}

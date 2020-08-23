@@ -69,10 +69,6 @@ public class Graph {
 		return this;
 	}	
 
-	public String getStartId() {
-		return fulcrumNode.getMainCard().person.getId();
-	}
-
 	public Set<Node> getNodes() {
 		return nodes;
 	}
@@ -80,11 +76,15 @@ public class Graph {
 	public List<Line> getLines() {
 		return lines;
 	}
+	
+	public IndiCard getFulcrum() {
+		return fulcrumNode.getMainCard();
+	}
 
 	/**
-	 * Start the diagram of the first person it can find with the provided ids.
-	 * @param ids One or more id to search the person that become the diagram fulcrum
-	 * @return True if everything is ok, false if doesn't find a fulcrum
+	 * The diagram fulcrum will be the first person found with the provided ids.
+	 * @param ids One or more id to search the person that becomes the diagram fulcrum
+	 * @return True if everything is ok, false if any fulcrum is not found
 	 */
 	public boolean startFrom(String... ids) {
 		
@@ -104,7 +104,7 @@ public class Graph {
 		}
 		if (fulcrum == null)
 			return false;
-		fulcrumNode = new UnitNode(gedcom, fulcrum, descendantGenerations == 0, fulcrum);
+		fulcrumNode = new UnitNode(gedcom, fulcrum, descendantGenerations == 0, null);
 		nodeRows.add(new ArrayList<Node>());
 
 		// Create nodes for ancestors
@@ -112,16 +112,18 @@ public class Graph {
 			Family parentFamily = fulcrum.getParentFamilies(gedcom).get(whichFamily);
 			Node parentNode = null;
 			if (ancestorGenerations > 0)
-				parentNode = new UnitNode(gedcom, parentFamily);
+				parentNode = new UnitNode(gedcom, parentFamily, fulcrum, false);
 			else
 				parentNode = new AncestryNode(gedcom, fulcrumNode.getMainCard());
 			fulcrumNode.getMainCard().origin = parentNode;
 			baseGroup = new Group(parentNode); // In which the fulcrum is child
 
 			// Recoursive call for ancestors
-			if (!parentFamily.getHusbands(gedcom).isEmpty())
+			if ((parentNode instanceof UnitNode && ((UnitNode)parentNode).husband != null)
+					|| (parentNode instanceof AncestryNode && ((AncestryNode)parentNode).miniFather != null))
 				findAncestors(baseGroup, 1, 1);
-			if (!parentFamily.getWives(gedcom).isEmpty())
+			if ((parentNode instanceof UnitNode && ((UnitNode)parentNode).wife != null)
+					|| (parentNode instanceof AncestryNode && ((AncestryNode)parentNode).miniMother != null))
 				findAncestors(baseGroup, 2, 1);
 			// Fulcrum has parent family but without parents
 			if (parentFamily.getHusbands(gedcom).isEmpty() && parentFamily.getWives(gedcom).isEmpty()) {
@@ -202,7 +204,7 @@ public class Graph {
 				UnitNode marriageNode;
 				// Following  marriages of fulcrum represented as an asterisk
 				if (i > 0)
-					marriageNode = new UnitNode(gedcom, marriageFamily, fulcrum);
+					marriageNode = new UnitNode(gedcom, marriageFamily, fulcrum, true);
 				else
 					marriageNode = fulcrumNode;
 				if (baseGroup != null)
@@ -232,10 +234,8 @@ public class Graph {
 	/**
 	 * Recursive method to put in nodeRows the ancestor families.
 	 * 
-	 * @param descendantGroup The group in which the {@link #Node} commonNode is
-	 *                        already the guardian
-	 * @param branch          Which branch to investigate in commonNode: 1 husband,
-	 *                        2 wife
+	 * @param descendantGroup The group in which the commonNode is already the guardian
+	 * @param branch          Which branch to investigate in commonNode: 0 none, 1 husband, 2 wife
 	 * @param rowNum          Number of the generation of ancestors
 	 */
 	private void findAncestors(Group descendantGroup, int branch, int rowNum) {
@@ -248,7 +248,7 @@ public class Graph {
 				Family family = person.getParentFamilies(gedcom).get(0);
 				Node parentNode = null;
 				if (rowNum <= ancestorGenerations)
-					parentNode = new UnitNode(gedcom, family);
+					parentNode = new UnitNode(gedcom, family, fulcrumNode.getMainCard().person, false);
 				else
 					parentNode = new AncestryNode(gedcom, commonNode.getCard(branch));
 				parentNode.branch = branch;
@@ -290,9 +290,11 @@ public class Graph {
 					nodeRow.add(commonNode);
 
 				// Recall this method for the husband and the wife
-				if (!family.getHusbands(gedcom).isEmpty())
+				if ((parentNode instanceof UnitNode && ((UnitNode)parentNode).husband != null)
+						|| (parentNode instanceof AncestryNode && ((AncestryNode)parentNode).miniFather != null))
 					findAncestors(group, 1, rowNum);
-				if (!family.getWives(gedcom).isEmpty())
+				if ((parentNode instanceof UnitNode && ((UnitNode)parentNode).wife != null)
+						|| (parentNode instanceof AncestryNode && ((AncestryNode)parentNode).miniMother != null))
 					findAncestors(group, 2, rowNum);
 				// parentNode has no husband nor wife
 				if (family.getHusbands(gedcom).isEmpty() && family.getWives(gedcom).isEmpty()) {
@@ -470,9 +472,9 @@ public class Graph {
 		for (Node node : nodes) {
 			if (node instanceof UnitNode) {
 				UnitNode unitNode = (UnitNode) node;
-				if (unitNode.husband != null && !unitNode.husband.acquired)
+				if (unitNode.husband != null && !unitNode.husband.acquired && unitNode.husband.origin != null)
 					lines.add(new Line(unitNode.husband));
-				if (unitNode.wife != null && !unitNode.wife.acquired)
+				if (unitNode.wife != null && !unitNode.wife.acquired && unitNode.wife.origin != null)
 					lines.add(new Line(unitNode.wife));
 			} else if (node instanceof ProgenyNode) {
 				for( MiniCard miniCard : ((ProgenyNode) node).miniChildren )

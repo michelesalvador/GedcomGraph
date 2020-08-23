@@ -6,12 +6,10 @@ public class Line implements Comparable<Line> {
 
 	public Line( Card card ) {
 		Node origin = card.origin;
-		if( origin != null ) {
-			x1 = origin.centerX();
-			y1 = origin.y + origin.height;
-			x2 = card.centerX();
-			y2 = card.y;
-		}
+		x1 = origin.centerX();
+		y1 = origin.y + origin.height;
+		x2 = card.centerX();
+		y2 = card.y;
 	}
 	
 	// Compare this line with another to establish the horizontal order 

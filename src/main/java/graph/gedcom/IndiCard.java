@@ -23,7 +23,11 @@ public class IndiCard extends Card {
 	public float centerX() {
 		return x + width / 2;
 	}
-	
+
+	public float centerY() {
+		return y + height / 2;
+	}
+
 	// This card can have one or two little ancestors above (shared ancestry or spouse ancestry)
 	public boolean hasAncestry() {
 		return origin instanceof AncestryNode && (((AncestryNode)origin).miniFather != null || ((AncestryNode)origin).miniMother != null);
