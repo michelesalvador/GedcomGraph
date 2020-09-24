@@ -16,7 +16,7 @@ public class Graph {
 	public float width, height;
 	private Gedcom gedcom;
 	// Settings for public methods with default values
-	private int whichFamily; // Which family display if the fulcrum is child in more than one family
+	public int whichFamily; // Which family display if the fulcrum is child in more than one family
 	private int ancestorGenerations = 2; // Generations to display
 	private int uncleGenerations = 1; // Can't be more than ancestor generations
 	private int descendantGenerations = 2;
@@ -86,7 +86,7 @@ public class Graph {
 	 * @param ids One or more id to search the person that becomes the diagram fulcrum
 	 * @return True if everything is ok, false if any fulcrum is not found
 	 */
-	public boolean startFrom(String... ids) {
+	public void startFrom(Person fulcrum) {
 		
 		// Reset all values
 		baseGroup = null;
@@ -96,20 +96,13 @@ public class Graph {
 		width = 0;
 		height = 0;
 		
-		Person fulcrum = null;
-		for (String id : ids) {
-			fulcrum = gedcom.getPerson(id);
-			if (fulcrum != null)
-				break;
-		}
-		if (fulcrum == null)
-			return false;
-		fulcrumNode = new UnitNode(gedcom, fulcrum, descendantGenerations == 0, null);
+		fulcrumNode = new UnitNode(gedcom, fulcrum, null, descendantGenerations == 0, null); // last 'null' means this is the fulcrum
 		nodeRows.add(new ArrayList<Node>());
 
 		// Create nodes for ancestors
 		if (!fulcrum.getParentFamilies(gedcom).isEmpty()) {
 			Family parentFamily = fulcrum.getParentFamilies(gedcom).get(whichFamily);
+			fulcrumNode.getMainCard().parentFamily = parentFamily;
 			Node parentNode = null;
 			if (ancestorGenerations > 0)
 				parentNode = new UnitNode(gedcom, parentFamily, fulcrum, false);
@@ -138,9 +131,9 @@ public class Graph {
 			// Fulcrum with marriages and siblings
 			for (Person sibling : parentFamily.getChildren(gedcom)) {
 				if (sibling.equals(fulcrum)) {
-					marriageAndChildren(fulcrum, fulcrumRow);					
+					marriageAndChildren(fulcrum, parentFamily, fulcrumRow);
 				} else if (withSiblings) {
-					UnitNode siblingNode = new UnitNode(gedcom, sibling, true, fulcrum);
+					UnitNode siblingNode = new UnitNode(gedcom, sibling, parentFamily, true, fulcrum);
 					baseGroup.addYoung(siblingNode, false);
 					siblingNode.getMainCard().origin = parentNode;
 					nodeRows.get(fulcrumRow).add(siblingNode);
@@ -152,7 +145,7 @@ public class Graph {
 		} else {
 			// Fulcrum without parent family
 			fulcrumRow = 0;
-			marriageAndChildren(fulcrum, 0);
+			marriageAndChildren(fulcrum, null, 0);
 		}
 
 		// All the nodes are stored in a set of nodes
@@ -172,7 +165,6 @@ public class Graph {
 				}
 			}
 		}
-		return true;
 	}
 
 
@@ -184,7 +176,7 @@ public class Graph {
 			for( Family stepFamily : stepFamilies ) {
 				Group stepGroup = new Group(parent);
 				for( Person stepSibling : stepFamily.getChildren(gedcom) ) {
-					UnitNode stepSiblingNode = new UnitNode(gedcom, stepSibling,
+					UnitNode stepSiblingNode = new UnitNode(gedcom, stepSibling, stepFamily,
 							descendantGenerations==0, fulcrumNode.getMainCard().person);
 					stepSiblingNode.getMainCard().origin = parent;
 					nodeRows.get(fulcrumRow).add(stepSiblingNode);
@@ -195,17 +187,18 @@ public class Graph {
 	}
 	
 	// Fulcrum with one or many marriages and their children
-	void marriageAndChildren(Person fulcrum, int fulcrumRow) {
+	void marriageAndChildren(Person fulcrum, Family parentFamily, int fulcrumRow) {
 		// Multi marriages and children
 		List<Family> spouseFamilies = fulcrum.getSpouseFamilies(gedcom);
 		if (!spouseFamilies.isEmpty()) {
 			for(int i = 0; i < spouseFamilies.size(); i++) {
 				Family marriageFamily = spouseFamilies.get(i);
 				UnitNode marriageNode;
-				// Following  marriages of fulcrum represented as an asterisk
-				if (i > 0)
+				// Following marriages of fulcrum represented by an asterisk
+				if (i > 0) {
 					marriageNode = new UnitNode(gedcom, marriageFamily, fulcrum, true);
-				else
+					marriageNode.getMainCard().parentFamily = parentFamily;
+				} else
 					marriageNode = fulcrumNode;
 				if (baseGroup != null)
 					baseGroup.addYoung(marriageNode, false);
@@ -215,7 +208,7 @@ public class Graph {
 					if(nodeRows.size() <= fulcrumRow + 1)
 						nodeRows.add(new ArrayList<Node>());
 					for (Person child : marriageFamily.getChildren(gedcom)) {
-						UnitNode childNode = new UnitNode(gedcom, child, descendantGenerations == 1, fulcrum);
+						UnitNode childNode = new UnitNode(gedcom, child, marriageFamily, descendantGenerations == 1, fulcrum);
 						spouseGroup.addYoung(childNode, false);
 						childNode.getMainCard().origin = marriageNode;
 						nodeRows.get(fulcrumRow+1).add(childNode);
@@ -246,6 +239,7 @@ public class Graph {
 			Person person = commonNode.getPerson(branch);
 			if (person != null && !person.getParentFamilies(gedcom).isEmpty()) {
 				Family family = person.getParentFamilies(gedcom).get(0);
+				commonNode.getCard(branch).parentFamily = family;
 				Node parentNode = null;
 				if (rowNum <= ancestorGenerations)
 					parentNode = new UnitNode(gedcom, family, fulcrumNode.getMainCard().person, false);
@@ -270,7 +264,7 @@ public class Graph {
 				if (rowNum - 1 <= uncleGenerations)
 					for (Person sibling : family.getChildren(gedcom)) {
 						if (!sibling.equals(person)) {
-							UnitNode siblingNode = new UnitNode(gedcom, sibling, true, fulcrumNode.getMainCard().person);
+							UnitNode siblingNode = new UnitNode(gedcom, sibling, family, true, fulcrumNode.getMainCard().person);
 							group.addYoung(siblingNode, false);
 							siblingNode.getMainCard().origin = parentNode;
 							// Add the sibling node to nodeRows
@@ -327,7 +321,7 @@ public class Graph {
 			if (!spouseFamily.getChildren(gedcom).isEmpty() && nodeRows.size() <= rowNum)
 				nodeRows.add(new ArrayList<Node>());
 			for (Person child : spouseFamily.getChildren(gedcom)) {
-				UnitNode childNode = new UnitNode(gedcom, child,
+				UnitNode childNode = new UnitNode(gedcom, child, spouseFamily,
 						rowNum - fulcrumRow == descendantGenerations, fulcrumNode.getMainCard().person);
 				spouseGroup.addYoung(childNode, false);
 				childNode.getMainCard().origin = commonNode;

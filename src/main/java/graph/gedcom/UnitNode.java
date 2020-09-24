@@ -16,12 +16,18 @@ public class UnitNode extends Node {
 	public String marriageDate;
 	public float bondWidth; // It dependes on marriageDate
 	public ProgenyNode progeny; // The little children below
-	public Family family;
 	Group husbandGroup; // The group to which the husband of this node belongs as child
 	Group wifeGroup; // The group to which the wife of this node belongs as child
 	
-	// Constructor starting from a person
-	public UnitNode(Gedcom gedcom, Person person, boolean withProgeny, Person fulcrum) {
+	/**
+	 * Constructor of a node, starting from a person.
+	 * @param gedcom The GEDCOM tree
+	 * @param person The person on which build the node
+	 * @param parentFamily The family in which 'person' is the child
+ 	 * @param withProgeny If true the little progeny cards will appear below the node
+ 	 * @param fulcrum The fulcrum of the diagram. If 'person' contains the fulcrum and this is null, the fulcrum node will be generated.
+	 */
+	public UnitNode(Gedcom gedcom, Person person, Family parentFamily, boolean withProgeny, Person fulcrum) {
 		// Couple
 		List<Family> families = person.getSpouseFamilies(gedcom);
 		if (!families.isEmpty()) {
@@ -36,8 +42,10 @@ public class UnitNode extends Node {
 			}
 			// Define the acquired spouse
 			if (husband != null && person.equals(husband.person)) {
+				husband.parentFamily = parentFamily;
 				defineSpouse(gedcom, wife, fulcrum);
 			} else if (wife != null && person.equals(wife.person)) {
+				wife.parentFamily = parentFamily;
 				defineSpouse(gedcom, husband, fulcrum);
 			}
 			// Restore fulcrum card not as asterisk
@@ -50,8 +58,10 @@ public class UnitNode extends Node {
 		else {
 			if (Util.sex(person) == 2) {
 				wife = new IndiCard(person);
+				wife.parentFamily = parentFamily;
 			} else {
 				husband = new IndiCard(person);
+				husband.parentFamily = parentFamily;
 			}
 		}
 	}
@@ -79,11 +89,11 @@ public class UnitNode extends Node {
 	public void init(Gedcom gedcom, Family family, Person fulcrum) {
 		this.family = family;
 		// Take the first two persons as husband and wife
-		List<Person> parents = getParents(gedcom, family);
-		if (parents.size() > 0)
-			husband = new IndiCard(parents.get(0));
-		if (parents.size() > 1)
-			wife = new IndiCard(parents.get(1));
+		List<Person> spouses = getSpouses(gedcom, family);
+		if (spouses.size() > 0)
+			husband = new IndiCard(spouses.get(0));
+		if (spouses.size() > 1)
+			wife = new IndiCard(spouses.get(1));
 		// Asterisks
 		if (husband != null && husband.person.equals(fulcrum)) {
 			husband.asterisk = true;
@@ -91,7 +101,7 @@ public class UnitNode extends Node {
 		if (wife != null && wife.person.equals(fulcrum)) {
 			wife.asterisk = true;
 		}
-		// Gedcom date of the marriage
+		// GEDCOM date of the marriage
 		for (EventFact ef : family.getEventsFacts()) {
 			if (ef.getTag().equals("MARR"))
 				marriageDate = ef.getDate();
@@ -105,6 +115,7 @@ public class UnitNode extends Node {
 			AncestryNode ancestry = new AncestryNode(gedcom, card);
 			if(ancestry.miniFather != null || ancestry.miniMother != null)
 				card.origin = ancestry;
+			card.parentFamily = ancestry.family;
 		}
 	}
 

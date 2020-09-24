@@ -1,11 +1,13 @@
 package graph.gedcom;
 
+import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Person;
 
 public class IndiCard extends Card {
 
 	public boolean dead;
 	public boolean asterisk;
+	public Family parentFamily; // The family in which this person is child
 
 	public IndiCard(Person person) {
 		this.person = person;
@@ -32,7 +34,7 @@ public class IndiCard extends Card {
 	public boolean hasAncestry() {
 		return origin instanceof AncestryNode && (((AncestryNode)origin).miniFather != null || ((AncestryNode)origin).miniMother != null);
 	}
-	
+
 	public String toString() {
 		return Util.essence(person);
 	}

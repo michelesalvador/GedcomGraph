@@ -9,6 +9,7 @@ import org.folg.gedcom.model.Person;
 public abstract class Node {
 	
 	public float x, y, width, height;
+	public Family family; // The node persons are the spouses in this family
 	public Group guardGroup; // The group to which this node belongs as guardian
 	int branch; // 0 doesn't matter, 1 husband, 2 wife
 
@@ -17,7 +18,7 @@ public abstract class Node {
 	abstract float centerRelX();
 
 	// Create a list of all spouses alternating husbands and wives
-	List<Person> getParents(Gedcom gedcom, Family family) {
+	List<Person> getSpouses(Gedcom gedcom, Family family) {
 		List<Person> persons = new ArrayList<>();
 		for (Person husband : family.getHusbands(gedcom))
 			persons.add(husband);

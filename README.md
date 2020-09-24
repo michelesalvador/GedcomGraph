@@ -25,7 +25,7 @@ You can choose to display:
 
 _GedcomGraph_ is a Maven project written with Eclipse.
 
-To generate the file `gedcomgraph-1.2.0.jar` you have to download the code and build the package in some way.
+To generate the file `gedcomgraph-1.3.0.jar` you have to download the code and build the package in some way.
 
 The package name is `graph.gedcom`.
 

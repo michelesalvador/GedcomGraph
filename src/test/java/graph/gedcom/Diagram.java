@@ -29,7 +29,7 @@ public class Diagram {
 		
 		// Instantiate a graph
 		Graph graph = new Graph(gedcom);
-		graph.maxAncestors(5).maxUncles(4).displaySiblings(true).maxDescendants(3).startFrom("I1");
+		graph.maxAncestors(5).maxUncles(4).displaySiblings(true).maxDescendants(3).startFrom(gedcom.getPerson("I1"));
 		//pr(graph);
 	
 		// This list represents the graphic layout

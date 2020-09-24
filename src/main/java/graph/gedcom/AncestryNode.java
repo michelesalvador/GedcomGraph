@@ -18,7 +18,8 @@ public class AncestryNode extends Node {
 		acquired = card.acquired;
 		Person person = card.person;
 		if (!person.getParentFamilies(gedcom).isEmpty()) {
-			List<Person> parents = getParents(gedcom, person.getParentFamilies(gedcom).get(0));
+			family = person.getParentFamilies(gedcom).get(0);
+			List<Person> parents = getSpouses(gedcom, family);
 			if (parents.size() > 0) {
 				people = 1;
 				countAncestors(parents.get(0));
