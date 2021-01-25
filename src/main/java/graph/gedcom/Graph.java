@@ -92,7 +92,6 @@ public class Graph {
 		baseGroup = null;
 		nodeRows.clear();
 		nodes.clear();
-		lines.clear();
 		width = 0;
 		height = 0;
 		
@@ -100,8 +99,11 @@ public class Graph {
 		nodeRows.add(new ArrayList<Node>());
 
 		// Create nodes for ancestors
-		if (!fulcrum.getParentFamilies(gedcom).isEmpty()) {
-			Family parentFamily = fulcrum.getParentFamilies(gedcom).get(whichFamily);
+		List<Family> fulcrumParents = fulcrum.getParentFamilies(gedcom);
+		if (!fulcrumParents.isEmpty()) {
+			if (whichFamily >= fulcrumParents.size())
+				whichFamily = fulcrumParents.size() - 1; // To prevent IndexOutOfBoundsException
+			Family parentFamily = fulcrumParents.get(whichFamily);
 			fulcrumNode.getMainCard().parentFamily = parentFamily;
 			Node parentNode = null;
 			if (ancestorGenerations > 0)
@@ -463,6 +465,7 @@ public class Graph {
 		}
 		
 		// Create the Lines
+		lines.clear();
 		for (Node node : nodes) {
 			if (node instanceof UnitNode) {
 				UnitNode unitNode = (UnitNode) node;
