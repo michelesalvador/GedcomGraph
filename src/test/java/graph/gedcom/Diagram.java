@@ -11,7 +11,7 @@ import graph.gedcom.Graph;
 import static graph.gedcom.Util.pr;
 
 public class Diagram {
-
+	
 	public static void main(String[] args) throws Exception {
 		new Diagram();
 	}
@@ -29,8 +29,14 @@ public class Diagram {
 		
 		// Instantiate a graph
 		Graph graph = new Graph(gedcom);
-		graph.maxAncestors(5).maxUncles(4).displaySiblings(true).maxDescendants(3).startFrom(gedcom.getPerson("I1"));
-		//pr(graph);
+		graph.maxAncestors(5)
+			.maxGreatUncles(4)
+			.displaySpouses(true)
+			.maxDescendants(3)
+			.maxSiblingsNephews(2)
+			.maxUnclesCousins(2)
+			.startFrom(gedcom.getPerson("I1"));
+		pr(graph);
 	
 		// This list represents the graphic layout
 		List<GraphicNode> graphicNodes = new ArrayList<>();

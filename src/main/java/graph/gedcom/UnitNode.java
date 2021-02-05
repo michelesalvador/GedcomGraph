@@ -24,21 +24,22 @@ public class UnitNode extends Node {
 	 * @param gedcom The GEDCOM tree
 	 * @param person The person on which build the node
 	 * @param parentFamily The family in which 'person' is the child
- 	 * @param withProgeny If true the little progeny cards will appear below the node
  	 * @param fulcrum The fulcrum of the diagram. If 'person' contains the fulcrum and this is null, the fulcrum node will be generated.
+ 	 * @param withSpouse Display the acquired parner
+ 	 * @param withProgeny The little progeny cards are requested to appear below the node
 	 */
-	public UnitNode(Gedcom gedcom, Person person, Family parentFamily, boolean withProgeny, Person fulcrum) {
+	public UnitNode(Gedcom gedcom, Person person, Family parentFamily, Person fulcrum, boolean withSpouse, boolean withProgeny) {
 		// Couple
 		List<Family> families = person.getSpouseFamilies(gedcom);
-		if (!families.isEmpty()) {
+		if (withSpouse && !families.isEmpty()) {
 			Family family;
 			// First marriage only for fulcrum in first fulcrum node
 			if (fulcrum == null) {
 				family = families.get(0);
-				init(gedcom, family, person);
+				init(gedcom, family, person, withProgeny);
 			} else { // Usually the last marriage of a person is displayed
 				family = families.get(families.size() - 1);
-				init(gedcom, family, fulcrum);
+				init(gedcom, family, fulcrum, withProgeny);
 			}
 			// Define the acquired spouse
 			if (husband != null && person.equals(husband.person)) {
@@ -52,29 +53,33 @@ public class UnitNode extends Node {
 			if (fulcrum == null) {
 				getMainCard().asterisk = false;
 			}
-			if (!family.getChildRefs().isEmpty() && withProgeny)
-				progeny = new ProgenyNode(gedcom, family, this);
-		} // Single person
-		else {
-			if (Util.sex(person) == 2) {
-				wife = new IndiCard(person);
-				wife.parentFamily = parentFamily;
-			} else {
-				husband = new IndiCard(person);
-				husband.parentFamily = parentFamily;
-			}
+		} else { // Single person
+			singlePerson(person, parentFamily);
+			// TODO Missing progeny for this single person
 		}
 	}
-
-	// Constructor for ancestors family and for multi marriages (after the first one)
-	public UnitNode(Gedcom gedcom, Family family, Person fulcrum, boolean followingMarriage) {
-		init(gedcom, family, fulcrum);
-		// For multi marriages only
-		if (followingMarriage) {
-			if (fulcrum.equals(husband.person)) {
-				defineSpouse(gedcom, wife, fulcrum);
-			} else if (fulcrum.equals(wife.person)) {
-				defineSpouse(gedcom, husband, fulcrum);
+	
+	/**
+	 * Constructor for ancestors family and for multi marriages (after the first one)
+	 * @param gedcom
+	 * @param family
+	 * @param fulcrum
+	 * @param followingMarriage Is this a following (asterisk) marriage?
+	 * @param withProgeny The little progeny cards are requested to appear below the node
+	 */
+	public UnitNode(Gedcom gedcom, Family family, Person fulcrum, boolean followingMarriage, boolean withSpouse, boolean withProgeny) {
+		if (followingMarriage && !withSpouse) {
+			singlePerson(fulcrum, family);
+			getMainCard().asterisk = true;
+		} else {
+			init(gedcom, family, fulcrum, withProgeny);
+			// For multi marriages only
+			if (followingMarriage) {
+				if (fulcrum.equals(husband.person)) {
+					defineSpouse(gedcom, wife, fulcrum);
+				} else if (fulcrum.equals(wife.person)) {
+					defineSpouse(gedcom, husband, fulcrum);
+				}
 			}
 		}
 	}
@@ -86,7 +91,7 @@ public class UnitNode extends Node {
 	 * @param gedcom
 	 * @param family
 	 */
-	public void init(Gedcom gedcom, Family family, Person fulcrum) {
+	private void init(Gedcom gedcom, Family family, Person fulcrum, boolean withProgeny) {
 		this.family = family;
 		// Take the first two persons as husband and wife
 		List<Person> spouses = getSpouses(gedcom, family);
@@ -101,6 +106,8 @@ public class UnitNode extends Node {
 		if (wife != null && wife.person.equals(fulcrum)) {
 			wife.asterisk = true;
 		}
+		if (withProgeny && !family.getChildRefs().isEmpty())
+			progeny = new ProgenyNode(gedcom, family, this);
 		// GEDCOM date of the marriage
 		for (EventFact ef : family.getEventsFacts()) {
 			if (ef.getTag().equals("MARR"))
@@ -108,8 +115,19 @@ public class UnitNode extends Node {
 		}
 	}
 
+	// Complete the creation of a single person
+	private void singlePerson(Person person, Family parentFamily) {
+		if (Util.sex(person) == 2) {
+			wife = new IndiCard(person);
+			wife.parentFamily = parentFamily;
+		} else {
+			husband = new IndiCard(person);
+			husband.parentFamily = parentFamily;
+		}
+	}
+
 	// Complete the definition of the acquired spouse
-	void defineSpouse(Gedcom gedcom, IndiCard card, Person fulcrum) {
+	private void defineSpouse(Gedcom gedcom, IndiCard card, Person fulcrum) {
 		if (card != null) {
 			card.acquired = true;
 			AncestryNode ancestry = new AncestryNode(gedcom, card);

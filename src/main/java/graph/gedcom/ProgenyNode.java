@@ -11,11 +11,17 @@ public class ProgenyNode extends Node {
 
 	public List<MiniCard> miniChildren;
 	private Gedcom gedcom;
+	public Node origin;
 	private int people;
 
 	ProgenyNode(Gedcom gedcom, Family family, Node origin) {
 		this.gedcom = gedcom;
+		this.origin = origin;
 		miniChildren = new ArrayList<>();
+		addFamily(family);
+	}
+	
+	public void addFamily(Family family) {
 		for (Person child : family.getChildren(gedcom)) {
 			people = 1;
 			countDescendants(child);
