@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
 	<name>GedcomGraph</name>
-	<comment>Java library to build genealogical trees on top of FamilySearch Gedcom</comment>
+	<comment>Java library to build genealogical trees on top of FamilySearch Gedcom 5</comment>
 	<projects>
 	</projects>
 	<buildSpec>

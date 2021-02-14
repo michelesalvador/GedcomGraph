@@ -1,5 +1,7 @@
 package graph.gedcom;
 
+// Scaffolding for a graphical implementation of GedcomGraph
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +10,7 @@ import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.parser.JsonParser;
 import org.folg.gedcom.parser.ModelParser;
 import graph.gedcom.Graph;
-import static graph.gedcom.Util.pr;
+import static graph.gedcom.Util.p;
 
 public class Diagram {
 	
@@ -36,76 +38,95 @@ public class Diagram {
 			.maxSiblingsNephews(2)
 			.maxUnclesCousins(2)
 			.startFrom(gedcom.getPerson("I1"));
-		pr(graph);
+
+		p(graph);
 	
 		// This list represents the graphic layout
 		List<GraphicNode> graphicNodes = new ArrayList<>();
 		
-		// Put all graphic cards into the layout
+		// Put all graphic nodes into the layout
 		for (Node node : graph.getNodes()) {
 			graphicNodes.add(new GraphicNode(node));
 		}
 		
-		// Get the dimensions of each graphic card and pass them back to each corresponding card
+		// Get the dimensions of each graphic node
 		for (GraphicNode graphicNode : graphicNodes) {
-			for(GraphicCard graphicCard : graphicNode.graphicCards) {
-				graphicCard.card.width = graphicNode.node.toString().length() * 6 + 20;
-				graphicCard.card.height = (int) (25 + (50 * Math.random()));
+			graphicNode.node.width = graphicNode.toString().length(); // graphicNode.getWidth() or something
+			graphicNode.node.height = graphicNode.hashCode(); // graphicNode.getHeight()
+		}
+		
+		// Prepare nodes for movement
+		graph.arrangeNodes();
+		
+		// Animate the nodes!
+		for (int i=0; i < 5; i++) { // Maybe more than 5 frames...
+
+			// Let the diagram calculate positions of Nodes and Lines
+			graph.playNodes();
+			
+			// Loop into the nodes to update their position on the cartesian plane of canvas
+			for (GraphicNode graphicNode : graphicNodes) {
+				p(graphicNode, "\n\t", graphicNode.node.x, "/", graphicNode.node.y);
+			}
+			
+			// Display the lines
+			for (Line line : graph.getLines()) {
+				// parent
+				float x1 = line.x1;
+				float y1 = line.y1;
+				// child
+				float x2 = line.x2;
+				float y2 = line.y2;
+				// ...
 			}
 		}
 		
-		// Let the diagram calculate positions of Nodes and Lines
-		graph.arrange();
-		
-		// Loop into the nodes so to update their position on the cartesian plane of canvas
-		for (GraphicNode graphicNode : graphicNodes) {
-			pr(graphicNode, "\n\t", graphicNode.node.x, "/", graphicNode.node.y);
-		}
-		
-		// Add the lines
-		for (Line line : graph.getLines()) {
-			// ...
-		}
 	}
 	
 	// The graphical representation of a node
 	// In Android could extend a layout (LinearLayout etc.)
 	class GraphicNode {
-		
 		Node node;
-		List<GraphicCard> graphicCards; // One or two cards
-		
 		GraphicNode (Node node) {
 			this.node = node;
-			graphicCards = new ArrayList<>();
-			if(node instanceof UnitNode) {
-				UnitNode unitNode = (UnitNode) node;
-				if(unitNode.husband != null)
-					graphicCards.add(new GraphicCard(unitNode.husband));
-				if(unitNode.wife != null)
-					graphicCards.add(new GraphicCard(unitNode.wife));
+			if (node instanceof PersonNode) {
+				PersonNode personNode = (PersonNode) node;
+				new GraphicPerson(personNode);
+			} else if (node instanceof FamilyNode) {
+				FamilyNode familyNode = (FamilyNode) node;
+				new GraphicFamily(familyNode);
 			}
 		}
-		
 		@Override
 		public String toString() {
 			return node.toString();
 		}
 	}
 
-	// The graphical representation of a card
+	// The graphical representation of a person card
 	// In Android could extend a layout (LinearLayout etc.)
-	class GraphicCard {
-		
-		Card card;
-		
-		GraphicCard (Card card) {
-			this.card = card;
+	class GraphicPerson {
+		PersonNode personNode;
+		GraphicPerson (PersonNode personNode) {
+			this.personNode = personNode;
+			// TODO display a person card
 		}
-		
 		@Override
 		public String toString() {
-			return card.toString();
+			return personNode.toString();
+		}
+	}
+	
+	// The graphical representation of a family node
+	class GraphicFamily {
+		FamilyNode familyNode;
+		GraphicFamily (FamilyNode familyNode) {
+			this.familyNode = familyNode;
+			// TODO display a family point
+		}
+		@Override
+		public String toString() {
+			return familyNode.toString();
 		}
 	}
 }

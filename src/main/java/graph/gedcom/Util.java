@@ -7,10 +7,17 @@ public class Util {
 	
 	public static int PADDING = 15; // Horizontal space between nodes
 	public static int MARGIN = 25; // Standard space between husband and wife
+	public static int MINI_MARGIN = 15; // Horizontal space between ancestry husband and wife
 	public static int SPACE = 100; // Vertical space between rows of cards
 	public static int TIC = 7; // Horizontal overlap of the marriage year over the cards
 	public static int GAP = 30; // Vertical space between unit and progeny
 	public static int PLAY = 10; // Horizontal space between progeny mini cards
+
+	// Card types
+	final static int FULCRUM = 0;
+	final static int REGULAR = 1;
+	final static int ANCESTRY = 2;
+	final static int PROGENY = 3;
 
 	/**
 	 * Utility to know the sex of a person.
@@ -60,7 +67,7 @@ public class Util {
 	/**
 	 * About a person tells if is dead or buried.
 	 * @param person The suspect
-	 * @return Is he/she dead?
+	 * @return Is their dead?
 	 */
 	public static boolean dead( Person person ) {
 		for( EventFact fact : person.getEventsFacts() ) {
@@ -71,7 +78,7 @@ public class Util {
 	}
 	
 	// Prints everything to the console
-	public static void pr(Object... objects) {
+	public static void p(Object... objects) {
 		String str = "";
 		for(Object obj : objects) 
 			str += obj + " ";
