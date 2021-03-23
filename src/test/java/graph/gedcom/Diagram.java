@@ -55,8 +55,9 @@ public class Diagram {
 			graphicNode.node.height = graphicNode.hashCode(); // graphicNode.getHeight()
 		}
 		
-		// Prepare nodes for movement
-		graph.arrangeNodes();
+		graph.initNodes(); // Prepare nodes
+
+		graph.placeNodes(); // First nodes displacement
 		
 		// Animate the nodes!
 		for (int i=0; i < 5; i++) { // Maybe more than 5 frames...

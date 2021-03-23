@@ -5,19 +5,30 @@ import org.folg.gedcom.model.Person;
 
 public class Util {
 	
-	public static int PADDING = 15; // Horizontal space between nodes
-	public static int MARGIN = 25; // Standard space between husband and wife
-	public static int MINI_MARGIN = 15; // Horizontal space between ancestry husband and wife
-	public static int SPACE = 100; // Vertical space between rows of cards
-	public static int TIC = 7; // Horizontal overlap of the marriage year over the cards
-	public static int GAP = 30; // Vertical space between unit and progeny
-	public static int PLAY = 10; // Horizontal space between progeny mini cards
+	public static int VERTICAL_SPACE = 90; // Vertical space between rows of nodes
+	public static int HORIZONTAL_SPACE = 17; // Horizontal space between nodes
+	public static int GROUP_DISTANCE = 25; // Horizontal space between groups
+
+	public static int FAMILY_WIDTH = 40; // Standard space between husband and wife
+	public static int MARRIAGE_HEIGHT = 25; // Height of marriage year oval
+	public static int MARRIAGE_OVERLAP = 7; // Horizontal overlap of the marriage year oval over partners
+	public static int MINI_FAMILY_WIDTH = 20; // Horizontal space between ancestry husband and wife
+	public static int HEARTH_DIAMETER = 8; // Family node without date
+	public static int MINI_HEARTH_DIAMETER = 6; // Mini family node without date
+
+	public static int ANCESTRY_DISTANCE = 20; // Vertical space between mini ancestry and person node
+	public static int PROGENY_DISTANCE = 25; // Vertical space between family node and mini progeny
+	public static int PROGENY_PLAY = 15; // Horizontal space between progeny mini cards
 
 	// Card types
-	final static int FULCRUM = 0;
-	final static int REGULAR = 1;
-	final static int ANCESTRY = 2;
-	final static int PROGENY = 3;
+	enum Card {
+		FULCRUM, REGULAR, ANCESTRY, PROGENY;
+	}
+
+	// Position of the node in the group
+	enum Position {
+		FIRST, MIDDLE, LAST;
+	}
 
 	/**
 	 * Utility to know the sex of a person.

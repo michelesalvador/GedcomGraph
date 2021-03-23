@@ -5,43 +5,29 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class Animator {
 	
 	float width, height;
 	PersonNode fulcrumNode;
 	int maxAbove;
-	Set<Node> nodes;
+	List<Node> nodes;
 	List<Line> lines;
-	Map<Integer, Float> genCenterPos; // Number of the generation and vertical center of the rows
-	
-	private double ATTRACTION_CONSTANT = 0.01;	// spring constant
-	private double REPULSION_CONSTANT = 20000; 	// charge constant
-	private double DEFAULT_DAMPING = .5; // Value between 0 and 1 that slows the motion of the nodes during layout.
-	private int DEFAULT_SPRING_LENGTH = 150; // Value in pixels representing the length of the imaginary springs that run along the connectors.
+	Map<Integer, Float> axes; // Number of the generation and vertical center of the rows
 	
 	Animator() {
-		nodes = new HashSet<>();
+		nodes = new ArrayList<>();
 		lines = new ArrayList<>();
 	}
 
 	void addNode(Node newNode) {
 		nodes.add(newNode);
-		/*for (Node oldNode : nodes) { TODO put into node the next sibling
-			if (newNode.generation == oldNode.generation && oldNode.next == null) {
-				oldNode.next = newNode;
-				newNode.prev = oldNode;
-				break;
-			}
-		}*/
 	}
 	
-	// Preparing the nodes for dance
-	void arrangeNodes(PersonNode fulcrumNode, int maxAbove, int maxBelow) {
+	// Preparing the nodes
+	void initNodes(PersonNode fulcrumNode, int maxAbove, int maxBelow) {
 
 		this.fulcrumNode = fulcrumNode;
 		this.maxAbove = maxAbove;
@@ -52,110 +38,322 @@ public class Animator {
 		int totalRows = maxAbove + 1 + maxBelow;
 		float[] rowMaxHeight = new float[totalRows];
 
-		for (Node node : nodes) {
-			node.velocity = new Vector();
-			node.nextPosition = new Point();
-
+		for( Node node : nodes ) {
 			// Discover the maximum height of rows
-			if (node.height > rowMaxHeight[node.generation+maxAbove])
-				rowMaxHeight[node.generation+maxAbove] = node.height;
-		}
-		
-		// Vertical position of the generation rows
-		genCenterPos = new HashMap<>();
-		float posY = rowMaxHeight[0] / 2;
-		for (int gen = -maxAbove; gen < totalRows-maxAbove; gen++) {
-			genCenterPos.put(gen, posY);
-			posY += rowMaxHeight[gen + maxAbove] + Util.SPACE;
+			if( !node.mini && node.height > rowMaxHeight[node.generation + maxAbove] )
+				rowMaxHeight[node.generation + maxAbove] = node.height;
 
-		}
-		
-		// Set the coordinates of the center of each node
-		int rank = 0;
-		for (Node node : nodes) {
-			node.pos = new Point(node.centerRelX() + rank * 150, genCenterPos.get(node.generation));
-			rank++;
-		}
-	}
-	
-	// Generate the next position of each node and line
-	public void playNodes() {
-		for (Node current : nodes) {
-			
-			// express the node's current position as a vector, relative to the origin
-			Vector currentPosition = new Vector(
-					calcDistance(new Point(), current.pos),
-					getBearingAngle(new Point(), current.pos)
-			);
-			Vector netForce = new Vector(0, 0);
-
-			// determine repulsion between all nodes
-			for (Node other : nodes) {
-				if (other != current)
-					netForce.sum(calcRepulsionForce(current, other));
-			}
-
-			// Attraction between all nodes
-			for (Node other : nodes) {
-				if (other != current)
-					netForce.sum(calcAttractionForce(current, other, DEFAULT_SPRING_LENGTH));
-			}
-
-			// Attraction inside a family
-			if(current instanceof FamilyNode) {
-				for(PersonNode partner : ((FamilyNode)current).partners) {
-					netForce.sum(calcAttractionForce(current, partner, DEFAULT_SPRING_LENGTH));
+			// Calculate sizes of each family node
+			if( node instanceof FamilyNode ) {
+				node.width = node.mini ? MINI_FAMILY_WIDTH : FAMILY_WIDTH;
+				for(Node partner : ((FamilyNode)node).partners ) {
+					node.height = Math.max(node.height, partner.height);
 				}
+				node.height =  node.height / 2 + MARRIAGE_HEIGHT / 2;
 			}
-			for (Node child : current.children) {
-				netForce.sum(calcAttractionForce(current, child, DEFAULT_SPRING_LENGTH));
-			}
-			/*for (Node parent : nodes) {
-				if (parent.children.contains(current))
-					netForce.sum(calcAttractionForce(current, parent, DEFAULT_SPRING_LENGTH));
-			}*/
-
-			// Force attractive to generation row
-			netForce.sum(calcGenerationAttraction(current));
-
-			// apply net force to node velocity
-			current.velocity.sum(netForce);
-			current.velocity.magnitude *= DEFAULT_DAMPING;
-
-			// apply velocity to node position
-			current.nextPosition = currentPosition.sum(current.velocity).toPoint();
-			
-			// Constraint to the generation row
-	//		current.nextPosition.y = genCenterPos.get(current.generation);
 		}
 
-		// Set the resultant positions
-		for (Node current : nodes) {
-			current.pos = current.nextPosition;
+		// Vertical position of the generation rows
+		axes = new HashMap<>();
+		float posY = rowMaxHeight[0] / 2;
+		for( int gen = -maxAbove; gen < totalRows - maxAbove; gen++ ) {
+			axes.put(gen, posY);
+			posY += rowMaxHeight[gen + maxAbove] + VERTICAL_SPACE;
 		}
 
-		// Find the diagram margins
-		Rectangle logicalBounds = getDiagramBounds();
-		width = logicalBounds.width;
-		height = logicalBounds.height;
-
-		// Correct the position and prepare cards for lines
-		for (Node node : nodes) {
-			node.pos.x -= logicalBounds.x;
-			node.pos.y -= logicalBounds.y;
-			node.x = node.pos.x - node.centerRelX(); // From here we use the top lef corner x y coordiantes
-			node.y = node.pos.y - node.centerRelY();
-		}
-		
 		// Create the Lines
 		lines.clear();
 		for (Node node : nodes) {
 			if (node instanceof PersonNode && node.getOrigin() != null)
-				lines.add(new Line((PersonNode)node));
+				lines.add(new CurveLine((PersonNode)node));
 			if (node instanceof PersonNode && node.getFamilyNode() != null)
-				lines.add(new Line((PersonNode)node, true));
+				lines.add(new StraightLine((PersonNode)node));
+		}
+	}
+
+	// Marriage nodes are added in the layout
+
+	// First positioning of all nodes, with some nodes still possibly overlapping
+	public void placeNodes() {
+
+		// Vertical positioning
+
+		// Put each regular (not mini) node on its generation row
+		for( Node node : nodes ) {
+			if( !node.mini )
+				node.y = axes.get(node.generation) - node.centerRelY(); // TODO controlla vertical center
+		}
+
+		// Places mini origin above and mini children below
+		for( Node origin : nodes ) {
+			Group children = origin.getChildren();
+			for( PersonNode child : children ) {
+				if( origin.mini ) {
+					distanceAbove(child, origin, children.size() > 1 ? VERTICAL_SPACE : ANCESTRY_DISTANCE);
+				} else if( child.mini ) {
+					distanceBelow(origin, child, PROGENY_DISTANCE);
+				}
+			}
+		}
+
+		// First horizontal positioning
+
+		// Dispose horizontally the nodes of the fulcrum generation
+		PersonNode previousWife = null;
+		for( int i = 0; i < nodes.size(); i++ ) {
+			Node node = nodes.get(i);
+			if( node instanceof PersonNode && !((PersonNode)node).acquired && !node.mini && node.generation == 0) {
+				placeFamily(previousWife, (PersonNode)node);
+				previousWife = node.getWife();
+			}
+		}
+
+		// Place fulcrum's ancestors and uncles with a recoursive method
+		Node fulcrumOrigin = fulcrumNode.getOrigin();
+		if( fulcrumOrigin != null && !fulcrumOrigin.mini ) {
+			fulcrumOrigin.centerToChildren();
+			placeUncles(fulcrumOrigin);
+			for( PersonNode person : fulcrumOrigin.getChildren() )
+				placeChildren(person);
+		} else // Center fulcrum children
+			placeChildren(fulcrumNode);
+
+		// Centers all mini ancestry relatively to children and all mini progeny relatively to origin
+		for( Node origin : nodes ) {
+			Group children = origin.getChildren();
+			if( children.size() > 0 ) {
+				if( origin.mini ) //
+					origin.centerToChildren();
+				else if( children.get(0).mini )
+					children.centerToOrigin();
+			}
 		}
 		
+		setDiagramBounds();
+	}
+
+	// Place the second node above the first one
+	private void distanceAbove(Node a, Node b, float gap) {
+		b.y = a.y - gap - b.height;
+	}
+
+	// Place the second node below the first one
+	private void distanceBelow(Node a, Node b, float gap) {
+		b.y = a.y + a.height + gap;
+	}
+
+	// Recursive method to place uncles bisides ancestors
+	private void placeUncles(Node ancestorNode) {
+		if( ancestorNode.getPartner(0) != null ) {
+			Node origin = ancestorNode.getPartner(0).getOrigin();
+			if( origin != null ) {
+				Group children = origin.getChildren();
+				for( int i = children.size() - 1; i >= 0; i-- ) {
+					PersonNode uncle = children.get(i).getHusband();
+					if( i > 0 ) {
+						PersonNode prevUncle = children.get(i - 1).getWife();
+						prevUncle.x = uncle.x - HORIZONTAL_SPACE - prevUncle.width;
+						placeFamily(prevUncle);
+					}
+					if(uncle.generation == -1)
+						placeChildren(uncle);
+				}
+				origin.centerToChildren();
+				if( !origin.mini )
+					placeUncles(origin);
+			}
+		}
+		if( ancestorNode.getPartner(1) != null ) {
+			Node origin = ancestorNode.getPartner(1).getOrigin();
+			if( origin != null ) {
+				Group children = origin.getChildren();
+				for( int i = 0; i < children.size() - 1; i++ ) {
+					PersonNode uncle = children.get(i).getWife();
+					if( i < children.size() - 1 ) {
+						PersonNode nextUncle = children.get(i + 1).getHusband();
+						nextUncle.x = uncle.x + uncle.width + HORIZONTAL_SPACE;
+						placeFamily(nextUncle);
+						if(uncle.generation == -1)
+							placeChildren(nextUncle);
+					}
+				}
+				origin.centerToChildren();
+				if( !origin.mini )
+					placeUncles(origin);
+			}
+		}
+	}
+
+	// Recoursive position of all the children nodes
+	void placeChildren(Node startNode) {
+		Node origin;
+		if( startNode.getFamilyNode() != null )
+			origin = startNode.getFamilyNode();
+		else
+			origin = startNode;
+		Group children = origin.getChildren();
+		for( int i = 0; i < children.size(); i++ ) {
+			PersonNode child = children.get(i);
+			if( !child.mini ) { // Regular children
+				if( i == 0) {
+					child.x = origin.centerX() - child.centerRelX() - children.getShrinkWidth() / 2;
+					placeFamily(child);
+				}
+				if( i < children.size() - 1 ) {
+					PersonNode nextChild = children.get(i + 1);
+					placeFamily(child.getWife(), nextChild);
+				}
+				placeChildren(child);
+			}
+		}
+	}
+
+	/** Place a family including partners starting from a main partner, to the right of a reference person
+	 * @param reference
+	 * @param mainPartner
+	 */
+	private float placeFamily(PersonNode reference, PersonNode mainPartner) {
+		float distance = 0;
+		if( reference == null )
+			reference = mainPartner.getWife();
+		if( mainPartner.familyNode != null ) {
+			FamilyNode family = mainPartner.familyNode;
+			if( mainPartner.equals(family.getHusband()) ) {
+				distance = reference.width + HORIZONTAL_SPACE;
+				mainPartner.x = reference.x + distance;
+				distance += mainPartner.width - MARRIAGE_OVERLAP;
+				family.x = reference.x + distance;
+				distance += family.width - MARRIAGE_OVERLAP;
+				family.getWife().x = reference.x + distance;
+			} else {
+				distance = reference.width + HORIZONTAL_SPACE;
+				family.getHusband().x = reference.x + distance;
+				distance += family.getHusband().width - MARRIAGE_OVERLAP;
+				family.x = reference.x + distance;
+				distance += family.width - MARRIAGE_OVERLAP;
+				mainPartner.x = reference.x + distance;
+			}
+		} else {
+			mainPartner.x = reference.x + reference.width + HORIZONTAL_SPACE;
+		}
+		return distance;
+	}
+
+	/** Generate the next position of each node and line, resolving overlapping (TODO)
+	* @return false if movement is complete
+	*/
+	public boolean playNodes() {
+		// Detect collision between overlapping groups of the same generation
+		float totalOverlap = 0;
+		for( int i = 0; i < nodes.size(); i++ ) {
+			Node originA = nodes.get(i);
+			if( !originA.getChildren().isEmpty() ) {
+				Group groupA = originA.getChildren();
+				inner: for( int j = i + 1; j < nodes.size(); j++ ) {
+					Node originB = nodes.get(j);
+					if( !originB.getChildren().isEmpty() ) {
+						Group groupB = originB.getChildren();
+						PersonNode personA = groupA.get(0).getHusband();
+						PersonNode personB = groupB.get(0).getHusband();
+
+						float groupAright = personA.x + groupA.getWidth();
+						float groupBleft = personB.x;
+						FamilyNode lastFamilyA = groupA.get(groupA.size()-1).getFamilyNode();
+						if( groupA.generation == groupB.generation // They are cousins
+								&& personA.mini == personB.mini // Both mini or both regular
+								&& !(personA.acquired || personB.acquired) // Acquired are excluded
+								&& (lastFamilyA == null || !lastFamilyA.equals(groupB.get(0).getFamilyNode())) // Not married
+								&& groupAright + GROUP_DISTANCE > groupBleft ) { // They are overlapping
+							float overlap = groupAright + GROUP_DISTANCE - groupBleft;
+							totalOverlap += overlap;
+
+							personA.x -= overlap/2;
+							personB.x += overlap/2;
+
+							placeFamily(personA);
+							placeFamily(personB);
+							placeGroup(groupA);
+							placeGroup(groupB);
+
+							for( Node node : groupA )
+								placeChildren(node);
+							for( Node node : groupB )
+								placeChildren(node);
+
+							//originA.centerToChildren();
+							//originB.centerToChildren();
+
+							break inner;
+						}
+					}
+				}
+			}
+		}
+
+		// Centers all mini ancestry relatively to children and all mini progeny relatively to origin
+		for( Node origin : nodes ) {
+			Group children = origin.getChildren();
+			if( children.size() > 0 ) {
+				if( origin.mini ) //
+					origin.centerToChildren();
+				else if( children.get(0).mini )
+					children.centerToOrigin();
+			}
+		}
+
+		// Final position of the nodes
+		setDiagramBounds();
+
+		return totalOverlap > 0.01; // Stop playing when no more overlap
+	}
+
+	// Position all the nodes to the right of the first node of a group
+	private void placeGroup(Group group) {
+		PersonNode previousWife = group.get(0).getWife();
+		for( int i = 1; i < group.size(); i++ ) {
+			PersonNode personNode = group.get(i);
+			placeFamily(previousWife, personNode);
+			previousWife = personNode.getWife();
+		}
+	}
+
+	// Update the position of a family node starting from a partner
+	private void placeFamily(PersonNode personNode) {
+		if( personNode.familyNode != null ) {
+			FamilyNode family = personNode.familyNode;
+			if( personNode.equals(family.getHusband()) ) {
+				family.x = personNode.x + personNode.width - MARRIAGE_OVERLAP;
+				family.getWife().x = family.x + family.width - MARRIAGE_OVERLAP;
+			} else {
+				family.x = personNode.x - family.width + MARRIAGE_OVERLAP;
+				family.getHusband().x = family.x + MARRIAGE_OVERLAP - family.getHusband().width;
+			}
+		}
+	}
+
+	private void setDiagramBounds() {
+		// Find the diagram margins to fit exactly around every node
+		float minX = 999999, minY = 999999;
+		float maxX = -999999, maxY = -999999;
+		for( Node node : nodes ) {
+			if( node.x < minX ) minX = node.x;
+			if( node.x + node.width > maxX ) maxX = node.x + node.width;
+			if( node.y < minY ) minY = node.y;
+			if( node.y + node.height > maxY ) maxY = node.y + node.height;
+		}
+		width = maxX - minX;
+		height = maxY - minY;
+
+		// Correct the position of each node
+		for( Node node : nodes ) {
+			node.x -= minX;
+			node.y -= minY;
+		}
+
+		// Update lines position
+		for( Line line : lines )
+			line.update();
+
 		// Order lines from left to right
 		Collections.sort(lines, new Comparator<Line>() {
 			@Override
@@ -163,97 +361,6 @@ public class Animator {
 				return line1.compareTo(line2);
 			}
 		});
-	}
 
-	// Calculates the distance between two points
-	private int calcDistance(Point a, Point b) {
-		double xDist = (a.x - b.x);
-		double yDist = (a.y - b.y);
-		int dist = (int)Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
-		return dist;
-	}
-
-	// Calculates the bearing angle from one point to another
-	private double getBearingAngle(Point start, Point end) {
-		Point half = new Point(start.x + ((end.x - start.x) / 2), start.y + ((end.y - start.y) / 2));
-
-		double diffX = (double)(half.x - start.x);
-		double diffY = (double)(half.y - start.y);
-
-		if (diffX == 0) diffX = 0.001;
-		if (diffY == 0) diffY = 0.001;
-
-		double angle;
-		if (Math.abs(diffX) > Math.abs(diffY)) {
-			angle = Math.tanh(diffY / diffX) * (180.0 / Math.PI);
-			if (((diffX < 0) && (diffY > 0)) || ((diffX < 0) && (diffY < 0))) angle += 180;
-		}
-		else {
-			angle = Math.tanh(diffX / diffY) * (180.0 / Math.PI);
-			if (((diffY < 0) && (diffX > 0)) || ((diffY < 0) && (diffX < 0))) angle += 180;
-			angle = (180 - (angle + 90));
-		}
-		return angle;
-	}
-
-	// Calculates the repulsion force between any two nodes in the diagram space
-	private Vector calcRepulsionForce(Node x, Node y) {
-		int proximity = Math.max(calcDistance(x.pos, y.pos), 1);
-
-		double force = -(REPULSION_CONSTANT / Math.pow(proximity, 2));
-		double angle = getBearingAngle(x.pos, y.pos);
-
-		return new Vector(force, angle);
-	}
-
-	/** Calculates the attraction force between two connected nodes, using the specified spring length.
-	 * @param a The node that the force is acting on.
-	 * @param b The node creating the force.
-	 * @param springLength The length of the spring, in pixels.
-	 * @return A Vector representing the attraction force.
-	 */
-	private Vector calcAttractionForce(Node a, Node b, double springLength) {
-		int proximity = Math.max(calcDistance(a.pos, b.pos), 1);
-		//float proximity = Math.max(calcMonoDistance(a.pos.x, b.pos.x), 1);
-
-		// Hooke's Law: F = -kx
-		double force = ATTRACTION_CONSTANT * Math.max(proximity - springLength, 0);
-		double angle = getBearingAngle(a.pos, b.pos);
-
-		return new Vector(force, angle);
-	}
-
-	// Attraction towards a generation row
-	private Vector calcGenerationAttraction(Node node) {
-		Point generation = new Point(node.pos.x, genCenterPos.get(node.generation));
-		int proximity = Math.max(calcDistance(node.pos, generation), 1);
-		int SHORT_SPRING = 1;
-		double force = ATTRACTION_CONSTANT * Math.max(proximity - SHORT_SPRING, 0);
-		double angle = getBearingAngle(node.pos, generation);
-		return new Vector(force, angle);
-	}
-
-	// Determines the logical bounds of the diagram.
-	// @return A Rectangle that fits exactly around every node in the diagram.
-	private Rectangle getDiagramBounds() {
-		float minX = 999999, minY = 999999;
-		float maxX = -999999, maxY = -999999;
-		for (Node node : nodes) {
-			if (node.pos.x - node.centerRelX() < minX) minX = node.pos.x - node.centerRelX();
-			if (node.pos.x + node.width - node.centerRelX() > maxX) maxX = node.pos.x + node.width - node.centerRelX();
-			if (node.pos.y - node.height/2 < minY) minY = node.pos.y - node.height/2;
-			if (node.pos.y + node.height/2 > maxY) maxY = node.pos.y + node.height/2;
-		}
-		return new Rectangle(minX, minY, maxX, maxY);
-	}
-
-	class Rectangle {
-		float x, y, width, height;
-		Rectangle(float x, float y, float width, float height) {
-			this.x = x;
-			this.y = y;
-			this.width = width;
-			this.height = height;
-		}
 	}
 }

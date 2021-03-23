@@ -8,6 +8,9 @@ import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
+
+import graph.gedcom.Util.Card;
+
 import static graph.gedcom.Util.*;
 
 public class FamilyNode extends Node {
@@ -18,28 +21,30 @@ public class FamilyNode extends Node {
 	/**
 	 * Constructor for ancestors families and for fulcrum marriages after the first one
 	 */
-	public FamilyNode(Gedcom gedcom, Family spouseFamily, int type) {
+	public FamilyNode(Gedcom gedcom, Family spouseFamily, Card type) {
 		this.spouseFamily = spouseFamily;
 		partners = new ArrayList<>();
-		if (type == FULCRUM || type == REGULAR) {
+		if (type == Card.FULCRUM || type == Card.REGULAR) {
 			// GEDCOM date of the marriage
 			for (EventFact ef : spouseFamily.getEventsFacts()) {
 				if (ef.getTag().equals("MARR"))
 					marriageDate = ef.getDate();
 			}
-		} else
+		} else {
 			mini = true;
+		}
 	}
 	
 	// Add a spouse to this family
 	void addPartner(PersonNode partner) {
 		this.partners.add(partner);
 		partner.familyNode = this;
+		partner.spouseFamily = spouseFamily;
 	}
 
 	// If this node has children
 	public boolean hasChildren() {
-		return !children.isEmpty();
+		return !getChildren().isEmpty();
 	}
 
 	@Override
@@ -49,19 +54,23 @@ public class FamilyNode extends Node {
 
 	@Override
 	public float centerRelY() {
-		return height / 2;
+		return MARRIAGE_HEIGHT / 2;
 	}
 
-	@Override
-	public float centerX() {
-		return x + centerRelX();
+	// Place the partners besides to this family node
+	void placePartners() {
+		float overlap = mini ? 0 : MARRIAGE_OVERLAP;
+		for( int i = 0; i < partners.size(); i++ ) {
+			PersonNode partner = partners.get(i);
+			if( i == 0 ) {
+				partner.x = x - partner.width + overlap;
+			} else {
+				partner.x = x + width - overlap;
+			}
+			partner.y = centerY() - partner.centerRelY();
+		}
 	}
 
-	@Override
-	public float centerY() {
-		return y + centerRelY();
-	}
-	
 	// Simple solution to retrieve the marriage year.
 	// Family Gem uses another much more complex.
 	public String marriageYear() {
@@ -80,7 +89,7 @@ public class FamilyNode extends Node {
 		String str = "Family: ";
 		for (PersonNode personNode : partners)
 			str += personNode + ", ";
-		str += children;
+		str += getChildren();
 		return str;
 	}
 }
