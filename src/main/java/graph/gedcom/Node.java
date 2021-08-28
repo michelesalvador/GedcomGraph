@@ -1,128 +1,124 @@
-package graph.gedcom;
-
 // Abstract class to be extended in a PersonNode or FamilyNode
 
-import static graph.gedcom.Util.p;
-import org.folg.gedcom.model.Family;
+package graph.gedcom;
 
-public abstract class Node {
-	
-	// Geometry for position in the diagram
-	public float x, y; // Absolute coordinates of the top left corner of the node
-	public float width, height; // Public dimensions of node
-	public boolean drag;
+import java.util.Collections;
+import java.util.List;
+import org.folg.gedcom.model.Family;
+import graph.gedcom.Util.Position;
+import static graph.gedcom.Util.*;
+
+public abstract class Node extends Metric {
 
 	// Contents
 	public Family spouseFamily; // The person in this node is spouse of this family
-	private Group children; // List of PersonNode descendants of a PersonNode or of a FamilyNode
+	Group group; // List of siblings to which this node belongs
+	Group youth; // List of PersonNode and FamilyNode descendants of a PersonNode or of a FamilyNode
 	public int generation; // Number of the generation to which this node belongs (0 for fulcrum, negative up and positive down)
 	public boolean mini; // The PersonNode will be displayed little (with just a number), and the familyNode without marriage date
+	boolean isAncestor;
+	Union union; // The union this node belongs to (expecially for ancestors)
+	float force; // Dynamic horizontal movement
 
-	abstract public float centerRelX();
-	abstract public float centerRelY();
+	// Calculate the initial width of first node (complementar to getMainWidth())
+	abstract float getLeftWidth(Branch branch);
 
-	public float centerX() {
-		return x + centerRelX();
+	// Calculate the to-center width of the main node included bond and partner
+	abstract float getMainWidth(Position pos, Branch branch);
+
+	/** Move this node in the center of children
+	* @param branch Paternal side (left) or maternal side (right)
+	*/
+	void centerToYouth(Branch branch) {
+		setX(youth.x + youth.getLeftWidth(branch) + youth.getCentralWidth(branch) / 2 - centerRelX());
 	}
 
-	public float centerY() {
-		return y + centerRelY();
-	}
-
-	// Move this node in the center of children
-	void centerToChildren() {
-		Group children = getChildren();
-		x = children.get(0).centerX() + children.getShrinkWidth() / 2 - centerRelX();
-		if( this instanceof FamilyNode )
-			((FamilyNode)this).placePartners();
-	}
-
-	public Group getChildren() {
-		if(children == null) {
-			children = new Group(this, generation+1);
+	// Horizontally distribute mini progeny nodes
+	void placeMiniChildrenX() {
+		if( youth != null && youth.mini ) {
+			float posX = 0;
+			for( Node child : youth.list ) {
+				child.setX(posX);
+				posX += child.width + PROGENY_PLAY;
+			}
+			youth.setX(centerX() - youth.getWidth() / 2);
 		}
-		return children;
 	}
 
-	public PersonNode getChild(int index) {
-		Group children = getChildren();
-		return children.size() > 0 ? children.get(index) : null;
-	}
-
-	// Methods for PersonNode
-	
-	Node getOrigin() {
-		if( this instanceof PersonNode ) {
-			return ((PersonNode)this).origin;
+	// Horizontally update mini progeny position
+	void setMiniChildrenX() {
+		if( youth != null && youth.mini ) {
+			float posX = centerX() - youth.width / 2;
+			for( Node child : youth.list ) {
+				child.setX(posX);
+				posX += child.width + PROGENY_PLAY;
+			}
 		}
-		return null;
 	}
 
-	FamilyNode getFamilyNode() { // TODO rinomina?
-		if( this instanceof PersonNode ) {
-			return ((PersonNode)this).familyNode;
-		}
-		return null;
-	}
-	
-	// Hybrid methods for FamilyNode and PersonNode
-	
-	// Returns the first partner not acquired or the first one available
-	PersonNode getMainPersonNode() {
+	// Position the origin of the acquired spouse
+	void placeAcquiredOriginX() {
 		if( this instanceof FamilyNode ) {
-			FamilyNode familyNode = (FamilyNode)this;
-			for( PersonNode personNode : familyNode.partners )
-				if( !personNode.acquired )
-					return personNode;
-			if( !familyNode.partners.isEmpty() )
-				return familyNode.partners.get(0);
-		} else if( this instanceof PersonNode )
-			return (PersonNode)this;
-		return null;
+			for( PersonNode partner : ((FamilyNode)this).partners ) {
+				if( partner.acquired && partner.origin != null ) {
+					partner.origin.setX(partner.centerX() - partner.origin.centerRelX());
+				}
+			}
+		}
 	}
-	
+
+	void placeAcquiredOriginY() {
+		if( this instanceof FamilyNode && !mini ) {
+			for( PersonNode partner : ((FamilyNode)this).partners ) {
+				if( partner.acquired && partner.origin != null ) {
+					partner.origin.setY(partner.y - ANCESTRY_DISTANCE - partner.origin.height);
+				}
+			}
+		}
+	}
+
+	List<Node> getGroupList() {
+		if( getGroup() != null )
+			return getGroup().list;
+		return Collections.emptyList();
+	}
+
+	// Hybrid methods for FamilyNode and PersonNode
+
+	abstract Group getGroup();
+
+	abstract Node getOrigin();
+
+	// A list with zero, one or two origin nodes
+	abstract List<Node> getOrigins();
+
+	abstract FamilyNode getFamilyNode();
+
+	abstract List<PersonNode> getPersonNodes();
+
+	// Returns the first partner not acquired [or the first one available]
+	abstract PersonNode getMainPersonNode();
+
 	// Softly returns the "husband" (the first parner)
-	PersonNode getHusband() {
-		if( this instanceof FamilyNode && !((FamilyNode)this).partners.isEmpty() )
-			return ((FamilyNode)this).partners.get(0);
-		else if( this instanceof PersonNode && ((PersonNode)this).familyNode != null )
-			return ((PersonNode)this).familyNode.getHusband();
-		else if( this instanceof PersonNode )
-			return (PersonNode)this;
-		return null;
-	}
+	abstract PersonNode getHusband();
 
 	// Softly returns the "wife" (the second partner) or the first person node available
-	PersonNode getWife() {
-		if( this instanceof FamilyNode && ((FamilyNode)this).partners.size() > 1 )
-			return ((FamilyNode)this).partners.get(1);
-		// TODO return il primo partner comunque? è possibile nel diagramma un FamilyNode con un solo partner?
-		else if( this instanceof PersonNode && ((PersonNode)this).familyNode != null )
-			return ((PersonNode)this).familyNode.getWife();
-		else if( this instanceof PersonNode )
-			return (PersonNode)this;
-		return null;
-	}
-	
-	// Strictly return the requested partner or null
-	PersonNode getPartner(int id) {
-		if( this instanceof FamilyNode && ((FamilyNode)this).partners.size() > id )
-			return ((FamilyNode)this).partners.get(id);
-		else if( this instanceof PersonNode ) {
-			if( ((PersonNode)this).familyNode != null )
-				return ((PersonNode)this).familyNode.getPartner(id);
-			else if( id == 0 ) // Single person
-				return (PersonNode)this;
-		}
-		return null;
+	abstract PersonNode getWife();
+
+	// Strictly returns the requested partner or null
+	abstract PersonNode getPartner(int id);
+
+	void setForce(float push) {
+		force += push;
 	}
 
-	// Between the children return the family node ancestor of fulcrum
-	Node getChildAncestor() {
-		for( PersonNode child : children ) {
-			if(child.familyNode != null && !child.getHusband().acquired && !child.getWife().acquired ) // un po' empirico e potrebbe non funzionare
-				return child.familyNode;
-		}
-		return null;
+	// Apply the force
+	float applyForce() {
+		force /= 4;
+		setX(x + force);
+		return force;
 	}
+
+	// This node is direct ancestor of the fulcrum
+	abstract boolean isAncestor();
 }

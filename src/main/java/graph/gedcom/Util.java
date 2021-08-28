@@ -1,21 +1,23 @@
 package graph.gedcom;
 
 import org.folg.gedcom.model.EventFact;
+import org.folg.gedcom.model.Name;
 import org.folg.gedcom.model.Person;
 
 public class Util {
-	
-	public static int VERTICAL_SPACE = 90; // Vertical space between rows of nodes
-	public static int HORIZONTAL_SPACE = 17; // Horizontal space between nodes
-	public static int GROUP_DISTANCE = 25; // Horizontal space between groups
 
-	public static int FAMILY_WIDTH = 40; // Standard space between husband and wife
+	public static int VERTICAL_SPACE = 90; // Vertical space between rows of nodes
+	public static int HORIZONTAL_SPACE = 15; // Horizontal space between nodes
+	public static int UNION_DISTANCE = 25; // Horizontal space between unions
+
+	public static int BOND_WIDTH = 24; // Horizontal distance between partners
+	public static int MINI_BOND_WIDTH = 20; // Horizontal space between ancestry husband and wife
+	public static int MARRIAGE_WIDTH = 40; // Width of the marriage year oval or of the empty marriage (overlaps included)
 	public static int MARRIAGE_HEIGHT = 25; // Height of marriage year oval
-	public static int MARRIAGE_OVERLAP = 7; // Horizontal overlap of the marriage year oval over partners
-	public static int MINI_FAMILY_WIDTH = 20; // Horizontal space between ancestry husband and wife
 	public static int HEARTH_DIAMETER = 8; // Family node without date
 	public static int MINI_HEARTH_DIAMETER = 6; // Mini family node without date
 
+	public static int LITTLE_GROUP_DISTANCE = 50; // Vertical space below family node without partners or mini ancestry, both with many children
 	public static int ANCESTRY_DISTANCE = 20; // Vertical space between mini ancestry and person node
 	public static int PROGENY_DISTANCE = 25; // Vertical space between family node and mini progeny
 	public static int PROGENY_PLAY = 15; // Horizontal space between progeny mini cards
@@ -30,64 +32,34 @@ public class Util {
 		FIRST, MIDDLE, LAST;
 	}
 
-	/**
-	 * Utility to know the sex of a person.
-	 * 
-	 * @param person The person whose sex we want to know
-	 * @return int 0 no sex, 1 male, 2 female, 3 undefined, 4 other
-	 */
-	public static int sex(Person person) {
-		for (EventFact ef : person.getEventsFacts()) {
-			if (ef.getTag() != null && ef.getTag().equals("SEX")) {
-				if (ef.getValue() == null)
-					return 4; // SEX tag exists but without value
-				else {
-					switch (ef.getValue()) {
-					case "M":
-						return 1;
-					case "F":
-						return 2;
-					case "U":
-						return 3;
-					default:
-						return 4; // other value
-					}
-				}
-			}
-		}
-		return 0; // no SEX tag
+	// Actual ancestors branch: paternal (left) or maternal (right). NONE is for single ancestors (male or female).
+	enum Branch {
+		NONE, PATER, MATER;
 	}
 
-	/**
-	 * The very basic about a person.
-	 * 
-	 * @param person
-	 * @return String
-	 */
+	// Requested position of uncles respect to parents node: a single parent can have siblings (the uncles) on both left and right sides.
+	// Same for half-siblings of fulcrum when a single parent is shown: they can be on the left and to the right of fulcrum.
+	enum Side {
+		NONE, LEFT, RIGHT;
+	}
+
+	// The very basic about a person
 	public static String essence(Person person) {
 		String str = "";
-		if (person != null) {
-			//str = person.getId() + " ";
-			if (!person.getNames().isEmpty())
-				str += person.getNames().get(0).getDisplayValue().replaceAll("/", "");
+		if( person != null ) {
+			// str = person.getId() + " ";
+			if( !person.getNames().isEmpty() ) {
+				Name name = person.getNames().get(0);
+				str += name.getDisplayValue().replaceAll("/", "");
+				if( name.getNickname() != null )
+					str += " \"" + name.getNickname() + "\"";
+			}
 			// str += " " + person.hashCode();
 		}
+		// if( str.length() > 1 ) str = str.substring(0, 1);
 		return str;
 	}
-	
-	/**
-	 * About a person tells if is dead or buried.
-	 * @param person The suspect
-	 * @return Is their dead?
-	 */
-	public static boolean dead( Person person ) {
-		for( EventFact fact : person.getEventsFacts() ) {
-			if( fact.getTag().equals( "DEAT" ) || fact.getTag().equals( "BURI" ) )
-				return true;
-		}
-		return false;
-	}
-	
+
 	// Prints everything to the console
 	public static void p(Object... objects) {
 		String str = "";

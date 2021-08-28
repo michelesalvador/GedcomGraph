@@ -2,14 +2,13 @@
 
 package graph.gedcom;
 
-//import static graph.gedcom.Util.p;
-
 public class CurveLine extends Line {
 
 	Node origin;
+	PersonNode personNode;
 
 	public CurveLine(PersonNode personNode) {
-		super(personNode);
+		this.personNode = personNode;
 		origin = personNode.origin;
 	}
 	

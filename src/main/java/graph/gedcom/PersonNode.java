@@ -1,21 +1,25 @@
 package graph.gedcom;
 
+import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
+import java.util.ArrayList;
+import java.util.List;
 import static graph.gedcom.Util.*;
 
 public class PersonNode extends Node {
-	
+
 	private Gedcom gedcom;
 	public Person person;
-	public Node origin; // The FamilyNode or PersonNode which this person was born
-	public FamilyNode familyNode; // The FamilyNode in which this person is spouse
+	public Node origin; // The FamilyNode or PersonNode which this person was born from
+	FamilyNode familyNode; // The FamilyNode in which this person is spouse
 	Card type; // Size and function
 	public boolean acquired; // Is this person acquired spouse (not blood relative)?
 	public boolean dead;
 	public int amount; // Number to display in little ancestry or progeny
-	
+	CurveLine line; // Curve line connecting this person with the origin above
+
 	/** Create a node rappresentig a person.
 	 * @param gedcom
 	 * @param person The dude.
@@ -25,71 +29,136 @@ public class PersonNode extends Node {
 		this.gedcom = gedcom;
 		this.person = person;
 		this.type = type;
-		if (type == Card.FULCRUM || type == Card.REGULAR) {
-			if(Util.dead(person))
+		if( type == Card.FULCRUM || type == Card.REGULAR ) {
+			if( isDead() )
 				dead = true;
-		} else if (type == Card.ANCESTRY) {
+		} else if( type == Card.ANCESTRY ) {
 			amount = 1;
 			countAncestors(person);
 			mini = true;
-		} else if (type == Card.PROGENY) {
+		} else if( type == Card.PROGENY ) {
 			amount = 1;
 			countDescendants(gedcom);
 			mini = true;
 		}
 	}
-	
-	/** Set the origin of this PersonNode and add it as child of the origin
-	 * @param origin The parent node of this person
-	 * @param penultimate Add the child before the last one child already existing
-	 */
-	void setOrigin(Node origin) {
-		setOrigin(origin, false);
+
+	@Override
+	Group getGroup() {
+		if( familyNode != null )
+			return familyNode.group;
+		return group;
 	}
-	void setOrigin(Node origin, boolean penultimate) {
-		if( origin != null ) {
-			this.origin = origin;
-			Group children = origin.getChildren();
-			if( penultimate && children.size() > 0 )
-				children.add(children.size() - 1, this);
-			else
-				children.add(this);
-		}
+
+	@Override
+	Node getOrigin() {
+		return origin;
 	}
-	
+
+	@Override
+	List<Node> getOrigins() {
+		List<Node> origins = new ArrayList<>();
+		if( origin != null )
+			origins.add(origin);
+		return origins;
+	}
+
+	@Override
+	FamilyNode getFamilyNode() {
+		return familyNode;
+	}
+
+	@Override
+	List<PersonNode> getPersonNodes() {
+		List<PersonNode> persons = new ArrayList<>();
+		persons.add(this);
+		return persons;
+	}
+
+	@Override
+	PersonNode getMainPersonNode() {
+		return this;
+	}
+
+	@Override
+	PersonNode getHusband() {
+		if( familyNode != null )
+			return familyNode.getHusband();
+		return this;
+	}
+
+	@Override
+	PersonNode getWife() {
+		if( familyNode != null )
+			return familyNode.getWife();
+		return this;
+	}
+
+	@Override
+	PersonNode getPartner(int id) {
+		if( familyNode != null )
+			return familyNode.getPartner(id);
+		else if( id == 0 ) // Single person
+			return this;
+		return null;
+	}
+
+	@Override
+	boolean isAncestor() {
+		return isAncestor;
+	}
+
 	// Recoursive count of direct ancestors
 	private void countAncestors(Person ancestor) {
-		if (amount < 100)
-			for (Family family : ancestor.getParentFamilies(gedcom)) {
-				for (Person father : family.getHusbands(gedcom)) {
+		if( amount <= 100 ) {
+			for( Family family : ancestor.getParentFamilies(gedcom) ) {
+				for( Person father : family.getHusbands(gedcom) ) {
 					amount++;
 					countAncestors(father);
 				}
-				for (Person mother : family.getWives(gedcom)) {
+				for( Person mother : family.getWives(gedcom) ) {
 					amount++;
 					countAncestors(mother);
 				}
 			}
+		}
 	}
-	
+
 	// Recoursive count of direct descendants
 	void countDescendants(Gedcom gedcom) {
 		this.gedcom = gedcom;
 		recoursiveCountDescendants(person);
 	}
+
 	private void recoursiveCountDescendants(Person person) {
-		if (amount < 100)
-			for (Family family : person.getSpouseFamilies(gedcom))
-				for (Person child : family.getChildren(gedcom)) {
+		if( amount <= 100 ) {
+			for( Family family : person.getSpouseFamilies(gedcom) )
+				for( Person child : family.getChildren(gedcom) ) {
 					amount++;
 					recoursiveCountDescendants(child);
 				}
+		}
 	}
-	
+
+	// Check if this person is dead or buried
+	private boolean isDead() {
+		for( EventFact fact : person.getEventsFacts() ) {
+			if( fact.getTag().equals( "DEAT" ) || fact.getTag().equals( "BURI" ) )
+				return true;
+		}
+		return false;
+	}
+
 	public boolean isFulcrumNode() {
 		return type == Card.FULCRUM;
 	}
-	
+
+	/*public CurveLine getLine() {
+		if( origin != null && line == null )
+			line = new CurveLine(this);
+		return line;
+	}*/
+
 	@Override
 	public float centerRelX() {
 		return width / 2;
@@ -100,31 +169,27 @@ public class PersonNode extends Node {
 		return height / 2;
 	}
 
-	// Calculate the to-center width of the node included family and partner
-	float getMainWidth(Position pos) {
-		float size = 0;
-		if( getFamilyNode() != null ) { // With family
-			FamilyNode familyNode = getFamilyNode();
-			int index = familyNode.partners.indexOf(this);
-			float famWidth = FAMILY_WIDTH - MARRIAGE_OVERLAP * 2;
-			if( pos == Position.FIRST ) {
-				size = centerRelX();
-				if( index == 0 ) // Is husband
-					size += famWidth + familyNode.getPartner(1).width;
-			} else if( pos == Position.LAST ) {
-				size = centerRelX();
-				if( index > 0 ) // Is wife
-					size += familyNode.getPartner(0).width + famWidth;
-			} else { // The complete width
-				size = familyNode.getPartner(0).width + famWidth + familyNode.getPartner(1).width;
-			}
-		} else { // Single
-			if( pos == Position.MIDDLE )
-				size = width;
-			else
-				size = centerRelX();
-		}
-		return size;
+	@Override
+	void setX(float x) {
+		this.x = x;
+	}
+
+	@Override
+	void setY(float y) {
+		this.y = y;
+	}
+
+	@Override
+	float getMainWidth(Position pos, Branch branch) {
+		if( pos == Position.MIDDLE )
+			return width;
+		else
+			return centerRelX();
+	}
+
+	@Override
+	float getLeftWidth(Branch branch) {
+		return centerRelX();
 	}
 
 	@Override
