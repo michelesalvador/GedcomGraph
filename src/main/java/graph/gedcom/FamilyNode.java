@@ -15,18 +15,15 @@ import static graph.gedcom.Util.*;
 public class FamilyNode extends Node {
 
 	List<PersonNode> partners;
-	Group stepYouthLeft, stepYouthRight; // Half-siblings of youth
-	Card type;
 	Bond bond;
+	Side side; // Following or previous marriage: LEFT is a husband, RIGHT is a wife
+	Match match; // Number of the relationship: SOLE, NEAR the central one, MIDDLE, or LAST at extreme left (with husband) or right (with wife)
 
-	// Constructor for ancestors families and for fulcrum marriages after the first one
-	public FamilyNode(Gedcom gedcom, Family spouseFamily, Card type) {
+	public FamilyNode(Family spouseFamily, boolean mini, Side side) {
 		this.spouseFamily = spouseFamily;
-		this.type = type;
+		this.mini = mini;
+		this.side = side;
 		partners = new ArrayList<>();
-		if( type == Card.ANCESTRY || type == Card.PROGENY ) {
-			mini = true;
-		}
 	}
 
 	@Override
@@ -82,6 +79,8 @@ public class FamilyNode extends Node {
 	PersonNode getWife() {
 		if( partners.size() > 1 )
 			return partners.get(1);
+		else if( !partners.isEmpty() )
+			return partners.get(0);
 		return null;
 	}
 
@@ -93,8 +92,8 @@ public class FamilyNode extends Node {
 	}
 
 	@Override
-	boolean isAncestor() {
-		return isAncestor;
+	boolean isMultiMarriage() {
+		return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
 	}
 
 	// Add a spouse to this family
@@ -106,33 +105,33 @@ public class FamilyNode extends Node {
 
 	// Crate bond if there are no partners or many partners
 	void createBond() {
-		if( partners.isEmpty() || partners.size() > 1 ) {
-			bond = new Bond(this);
-			if( type == Card.FULCRUM || type == Card.REGULAR ) {
-				// GEDCOM date of the marriage
-				for( EventFact ef : spouseFamily.getEventsFacts() ) {
-					if( ef.getTag().equals("MARR") )
-						bond.marriageDate = ef.getDate();
-				}
+		if( partners.size() == 1 && (mini || side == Side.NONE)  )
+			return;
+		bond = new Bond(this);
+		if( !mini ) {
+			// GEDCOM date of the marriage
+			for( EventFact ef : spouseFamily.getEventsFacts() ) {
+				if( ef.getTag().equals("MARR") )
+					bond.marriageDate = ef.getDate();
 			}
 		}
 	}
 
 	// If this node has children
 	boolean hasChildren() {
-		if( type == Card.ANCESTRY ) // Mini ancestry are a little bit an exception
+		if( mini ) // Acquired mini ancestry don't have youth but they appear to have
 			return true;
 		return youth != null;
 	}
 
 	@Override
 	public float centerRelX() {
-		if( partners.isEmpty() )
-			return (mini ? MINI_BOND_WIDTH : MARRIAGE_WIDTH) / 2;
-		else if( partners.size() == 1 )
-			return partners.get(0).width / 2;
-		else
+		if( partners.isEmpty() || side == Side.RIGHT )
+			return bond.width / 2;
+		else if( partners.size() > 1 || side == Side.LEFT )
 			return partners.get(0).width + getBondWidth() / 2;
+		else
+			return partners.get(0).width / 2;
 	}
 
 	@Override
@@ -140,14 +139,15 @@ public class FamilyNode extends Node {
 		return height / 2;
 	}
 
-	float marriageOverlap = (MARRIAGE_WIDTH - BOND_WIDTH) / 2;
-
 	// Place partners and bond
 	@Override
 	void setX(float x) {
 		this.x = x;
 		if( partners.isEmpty() ) { // Mini ancestry without partners
+			bond.setX(x);
+		} else if( side == Side.RIGHT ) { // Next marriage with wife
 			bond.x = x;
+			partners.get(0).x = x + bond.width - bond.overlap;
 		} else {
 			for( int i = 0; i < partners.size(); i++ ) {
 				PersonNode partner = partners.get(i);
@@ -155,13 +155,12 @@ public class FamilyNode extends Node {
 					partner.x = x;
 					x += partner.width;
 					if( bond != null ) {
-						bond.x = x - (mini ? 0 : marriageOverlap);
+						bond.setX(x);;
 						x += getBondWidth();
 					}
 				} else {
 					partner.x = x;
 				}
-				partner.y = centerY() - partner.centerRelY();
 			}
 		}
 	}
@@ -178,11 +177,12 @@ public class FamilyNode extends Node {
 
 	@Override
 	float getLeftWidth(Branch branch) {
-		if( branch == Branch.MATER || partners.indexOf(getMainPersonNode()) > 0 ) { // Is wife
+		if( (branch == Branch.MATER || partners.indexOf(getMainPersonNode()) > 0) && partners.size() > 1 ) { // Is wife
 			return getPartner(0).width + getBondWidth() + getPartner(1).centerRelX();
-		} else { // Is husband
+		} else if( !partners.isEmpty() ) { // Is husband
 			return getPartner(0).centerRelX();
 		}
+		return 0;
 	}
 
 	@Override
@@ -192,12 +192,12 @@ public class FamilyNode extends Node {
 		if( pos == Position.FIRST ) {
 			if( branch == Branch.MATER ) {
 				size = getWife().centerRelX();
-			} else {
+			} else if(getMainPersonNode() != null) {
 				size = getMainPersonNode().centerRelX();
 				if( index == 0 && partners.size() > 1 ) // Is husband
 					size += getBondWidth() + getPartner(1).width;
 			}
-		} else if( pos == Position.LAST ) {
+		} else if( pos == Position.LAST && getMainPersonNode() != null) {
 			size = getMainPersonNode().centerRelX();
 			if( index > 0 ) // Is wife
 				size += getPartner(0).width + getBondWidth();
@@ -210,7 +210,7 @@ public class FamilyNode extends Node {
 	// Bond width excluding overlapping
 	float getBondWidth() {
 		if( bond != null )
-			return mini ? MINI_BOND_WIDTH : BOND_WIDTH;
+			return mini ? MINI_BOND_WIDTH : bond.marriageDate != null ? MARRIAGE_INNER_WIDTH : BOND_WIDTH;
 		return 0;
 	}
 
@@ -222,6 +222,7 @@ public class FamilyNode extends Node {
 		if( txt.lastIndexOf(", ") > 0 )
 			txt = txt.replaceAll(", $", "");
 		//txt += " " + hashCode();
+		//txt += " " + match;
 		txt += "}";
 		return txt;
 	}

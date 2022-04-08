@@ -29,7 +29,11 @@ public class Union extends Metric {
 
 	// For descendants where union = group
 	Node getOrigin() {
-		return list.get(0).getOrigin();
+		for(Node node : list) {
+			if( node.getOrigin() != null )
+				return node.getOrigin();
+		}
+		return null;
 	}
 
 	public int getGeneration() {
@@ -40,6 +44,8 @@ public class Union extends Metric {
 	@Override
 	public float centerRelX() {
 		Group group = list.get(0).getGroup();
+		if( group.stallion != null )
+			return group.stallion.getLeftWidth(null);
 		return group.getLeftWidth(null) + group.getCentralWidth(null) / 2;
 	}
 

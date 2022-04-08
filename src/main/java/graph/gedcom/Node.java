@@ -30,7 +30,10 @@ public abstract class Node extends Metric {
 	* @param branch Paternal side (left) or maternal side (right)
 	*/
 	void centerToYouth(Branch branch) {
-		setX(youth.x + youth.getLeftWidth(branch) + youth.getCentralWidth(branch) / 2 - centerRelX());
+		if( youth.stallion != null )
+			setX(youth.stallion.x + youth.stallion.getLeftWidth(branch) - centerRelX());
+		else
+			setX(youth.x + youth.getLeftWidth(branch) + youth.getCentralWidth(branch) / 2 - centerRelX());
 	}
 
 	// Horizontally distribute mini progeny nodes
@@ -108,6 +111,9 @@ public abstract class Node extends Metric {
 	// Strictly returns the requested partner or null
 	abstract PersonNode getPartner(int id);
 
+	// This node is one of the three match: NEAR, MIDDLE or FAR
+	abstract boolean isMultiMarriage();
+
 	void setForce(float push) {
 		force += push;
 	}
@@ -118,7 +124,4 @@ public abstract class Node extends Metric {
 		setX(x + force);
 		return force;
 	}
-
-	// This node is direct ancestor of the fulcrum
-	abstract boolean isAncestor();
 }

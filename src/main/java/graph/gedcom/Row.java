@@ -24,7 +24,7 @@ public class Row extends ArrayList<Union> {
 		for( Union union : this )
 			txt += union + ", ";
 		txt = txt.replaceAll(", $", "");
-		txt += "> " + yAxe;
+		txt += ">";
 		return txt;
 	}
 }

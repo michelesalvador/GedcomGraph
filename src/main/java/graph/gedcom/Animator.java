@@ -16,9 +16,12 @@ public class Animator {
 	List<Node> nodes; // All person and family nodes regular and mini
 	List<PersonNode> personNodes;
 	List<Bond> bonds;
-	List<Line> lines; // All the lines ordered from left to right
-	List<LinesRow> lineRows; // All the lines divided in groups in a 2D array
-	List<Set<Line>> linesGroups; // All the lines distributed in groups by proximity
+	List<Line> lines; // All the continuous lines ordered from left to right
+	List<LinesRow> lineRows; // All the continuous lines divided in groups in a 2D array
+	List<Set<Line>> lineGroups; // All the continuous lines distributed in groups by proximity
+	List<Line> backLines; // All the back (dashed) lines ordered from left to right
+	List<LinesRow> backLineRows; // All the back (dashed) lines divided in groups in a 2D array
+	List<Set<Line>> backLineGroups; // All the back (dashed) lines distributed in groups by proximity
 	List<Group> groups; // Array of groups of PersonNodes and FamilyNodes (not mini)
 	List<Row> unionRows; // Array of rows of Unions
 	int maxBitmapWidth, maxBitmapHeight;
@@ -33,7 +36,10 @@ public class Animator {
 		bonds = new ArrayList<>();
 		lines = new ArrayList<>();
 		lineRows = new ArrayList<>();
-		linesGroups = new ArrayList<>();
+		lineGroups = new ArrayList<>();
+		backLines = new ArrayList<>();
+		backLineRows = new ArrayList<>();
+		backLineGroups = new ArrayList<>();
 		groups = new ArrayList<>();
 		unionRows = new ArrayList<>();
 		allFractions = new ArrayList<>();
@@ -72,10 +78,15 @@ public class Animator {
 				// Bond sizes
 				Bond bond = familyNode.bond;
 				if( bond != null ) {
-					float bondWidth = familyNode.mini ? MINI_BOND_WIDTH : MARRIAGE_WIDTH;
-					familyNode.bond.width = bondWidth;
-					familyNode.bond.height = familyNode.height;
-					bonds.add(familyNode.bond);
+					float bondWidth = familyNode.mini ? MINI_BOND_WIDTH : bond.marriageDate != null ? MARRIAGE_WIDTH : BOND_WIDTH;
+					bond.width = bondWidth;
+					bond.height = familyNode.height;
+					if( bond.marriageDate != null ) {
+						bond.overlap = (MARRIAGE_WIDTH - MARRIAGE_INNER_WIDTH) / 2;
+						if( familyNode.side == Side.LEFT || familyNode.side == Side.RIGHT )
+							familyNode.width += bond.overlap;
+					}
+					bonds.add(bond);
 					familyNode.width += familyNode.getBondWidth();
 				}
 			}
@@ -100,6 +111,7 @@ public class Animator {
 
 		// Create the Lines
 		lines.clear();
+		backLines.clear();
 		for( Node node : nodes ) {
 			for( PersonNode personNode : node.getPersonNodes() ) {
 				if( personNode.getOrigin() != null ) {
@@ -108,8 +120,12 @@ public class Animator {
 			}
 			if( node instanceof FamilyNode ) {
 				FamilyNode familyNode = (FamilyNode)node;
-				if( familyNode.partners.size() > 1 && familyNode.bond.marriageDate == null )
+				if( familyNode.partners.size() > 0 && (familyNode.match == Match.MIDDLE || familyNode.match == Match.FAR) )
+					lines.add(new NextLine(familyNode));
+				else if( familyNode.partners.size() > 1 && familyNode.bond.marriageDate == null )
 					lines.add(new HorizontalLine(familyNode));
+				if( familyNode.match == Match.MIDDLE || familyNode.match == Match.FAR )
+					backLines.add(new BackLine(familyNode));
 				if( familyNode.hasChildren() && familyNode.bond != null )
 					lines.add(new VerticalLine(familyNode));
 			}
@@ -120,33 +136,42 @@ public class Animator {
 		for( Group group : groups ) {
 			if( !group.mini && !group.list.isEmpty() ) {
 				Row row = unionRows.get(group.generation + maxAbove);
-				Union newUnion = null;
+				Union union = null;
 				boolean joinExistingGroup = false;
 				find:
 				for( Node node : group.list ) {
-					if( node.isAncestor() ) {
+					if( node.isAncestor ) {
 						// Search an existing union to join
-						for( Union union : row ) {
-							if( node.equals(union.ancestor) ) {
-								newUnion = union;
+						for( Union un : row ) {
+							if( node.equals(un.ancestor) ) {
+								union = un;
 								joinExistingGroup = true;
 								break find;
 							}
 						}
-						newUnion = new Union();
-						newUnion.ancestor = node;
-						newUnion.ancestor.union = newUnion;
+						union = new Union();
+						union.ancestor = node;
+						union.ancestor.union = union;
 						break;
 					}
 				}
-				if( newUnion == null ) { // Union without ancestor
-					newUnion = new Union();
+				if( union == null ) { // Union without ancestor
+					union = new Union();
 				}
-				newUnion.list.addAll(group.list);
-				if( joinExistingGroup ) {
-					newUnion.list.remove(newUnion.ancestor); // remove duplicated ancestor node
-				} else {
-					row.addUnion(newUnion);
+				// Add the group to the union
+				if( joinExistingGroup ) { // Already populated union
+					for( Node node : group.list ) {
+						if( !node.equals(union.ancestor)) { // Avoid duplicated ancestor node
+							if( group.branch == Branch.PATER ) // Insert before ancestor
+								union.list.add(union.list.indexOf(union.ancestor), node);
+							else {
+								union.list.add(node); // Add at the end
+							}
+						}
+					}
+				} else { // Empty union
+					union.list.addAll(group.list);
+					row.addUnion(union);
 				}
 			}
 		}
@@ -171,7 +196,7 @@ public class Animator {
 
 		// Places vertically mini origins and mini youths
 		for( Group group : groups ) {
-			if( group.isOriginMiniOrEmpty() ) {
+			if( !group.mini && group.isOriginMiniOrEmpty() ) {
 				group.y = unionRows.get(group.generation + maxAbove).yAxe - group.centerRelY();
 				group.placeOriginY();
 			}
@@ -199,6 +224,7 @@ public class Animator {
 		if( fulcrumOrigin != null ) {
 			placeAncestors(fulcrumOrigin, Branch.NONE);
 		}
+		//placeAncestors(fulcrumNode);
 
 		// Horizontally place acquired mini ancestry and all mini progeny
 		for( Node node : nodes ) {
@@ -220,6 +246,41 @@ public class Animator {
 		maxForces = 0;
 		allFractions.clear();
 	}
+
+	// Experimental alternative method that requires the node itself instead of its origin
+	/*private void placeAncestors(PersonNode personNode) {
+		Node ancestorNode = personNode.getOrigin();
+		if( ancestorNode != null ) {
+			ancestorNode.setX(personNode.centerX() - ancestorNode.centerRelX());
+			Union union = ancestorNode.union;
+			if( union != null ) {
+				// Place paternal uncles
+				float posX = ancestorNode.x;
+				for( int i = union.list.indexOf(ancestorNode) - 1; i >= 0; i-- ) {
+					Node node = union.list.get(i);
+					posX -= node.width + HORIZONTAL_SPACE;
+					node.setX(posX);
+					// Cousins
+					if( node.generation == -1 ) {
+						placeChildren(node);
+					}
+				}
+				// Place maternal uncles
+				posX = ancestorNode.x + ancestorNode.width + HORIZONTAL_SPACE;
+				for( int i = union.list.indexOf(ancestorNode) + 1; i < union.list.size(); i++ ) {
+					Node node = union.list.get(i);
+					node.setX(posX);
+					posX += node.width + HORIZONTAL_SPACE;
+					// Cousins
+					if( node.generation == -1 ) {
+						placeChildren(node);
+					}
+				}
+				for( PersonNode partner : ancestorNode.getPersonNodes() )
+					placeAncestors(partner);
+			}
+		}
+	}*/
 
 	// Recursive method to horizontally place ancestors and uncles
 	private void placeAncestors(Node ancestorNode, Branch branch) {
@@ -246,31 +307,6 @@ public class Animator {
 				// Cousins
 				if( node.generation == -1) {
 					placeChildren(node);
-				}
-			}
-			// Step-siblings
-			if( union.getGeneration() == -1 ) {
-				Group fulcrumGroup = fulcrumNode.getGroup();
-				// Paternal
-				Group leftStepGroup = ancestorNode.getFamilyNode().stepYouthLeft;
-				if( leftStepGroup != null ) {
-					posX = fulcrumGroup.x;
-					for( int i = leftStepGroup.list.size() - 1; i >= 0; i-- ) {
-						Node node = leftStepGroup.list.get(i);
-						posX -= HORIZONTAL_SPACE + node.width; // Per la precisione il primo dovrebbe essere -UNION_DISTANCE
-						node.setX(posX);
-						placeChildren(node);
-					}
-				}
-				// Maternal
-				Group rightStepGroup = ancestorNode.getFamilyNode().stepYouthRight;
-				if( rightStepGroup != null ) {
-					posX = fulcrumGroup.x + fulcrumGroup.getWidth() + UNION_DISTANCE;
-					for( Node node : rightStepGroup.list ) {
-						node.setX(posX);
-						posX += node.width + HORIZONTAL_SPACE;
-						placeChildren(node);
-					}
 				}
 			}
 			// Recoursive calls
@@ -349,7 +385,7 @@ public class Animator {
 					nextOverlap = Integer.MIN_VALUE;
 				// Try to center descendants below the origin
 				Node origin = union.getOrigin();
-				if( row.generation >= 0 && origin != null ) {
+				if( row.generation >= 0 && origin != null && !origin.mini ) {
 					float distance = origin.centerX() - union.centerX();
 					float push = 0;
 					if( distance > 0 )
@@ -484,53 +520,56 @@ public class Animator {
 		}
 
 		if( maxBitmapWidth > 0 && maxBitmapHeight > 0 ) {
-			// Update lines position
-			for( Line line : lines )
-				line.update();
+			distributeLines(lines, lineRows, lineGroups);
+			distributeLines(backLines, backLineRows, backLineGroups);
+		}
+	}
 
-			// Order lines from left to right
-			Collections.sort(lines, new Comparator<Line>() {
-				@Override
-				public int compare(Line line1, Line line2) {
-					return line1.compareTo(line2);
-				}
-			});
+	private void distributeLines(List<Line> lines, List<LinesRow> lineRows, List<Set<Line>> lineGroups) {
+		// Update lines position
+		for( Line line : lines )
+			line.update();
 
-			// Clear lineRows
-			for( LinesRow row : lineRows ) {
-				row.reset();
+		// Order lines from left to right
+		Collections.sort(lines, new Comparator<Line>() {
+			@Override
+			public int compare(Line line1, Line line2) {
+				return line1.compareTo(line2);
 			}
+		});
 
-			// Distribute lines inside 'lineRows'
-			for( Line line : lines ) {
-				float lineWidth = Math.abs(line.x1 - line.x2);
-				if( lineWidth <= maxBitmapWidth ) {
-					int rowNum = (int)(line.y2 / maxBitmapHeight);
-					while( rowNum >= lineRows.size() ) {
-						lineRows.add(new LinesRow());
-					}
-					LinesRow row = lineRows.get(rowNum);
-					if( row.restartX < 0)
-						row.restartX = Math.min(line.x1, line.x2);
-					float groupRight = Math.max(line.x1, line.x2) - row.restartX;
-					// Start another group
-					if( groupRight > maxBitmapWidth ) {
-						row.activeGroup++;
-						row.restartX = Math.min(line.x1, line.x2);
-					}
-					if( row.activeGroup >= row.size() )
-						row.add(new HashSet<Line>());
-					row.get(row.activeGroup).add(line);
+		// Clear lineRows
+		for( LinesRow row : lineRows ) {
+			row.reset();
+		}
+		// Distribute lines inside 'lineRows'
+		for( Line line : lines ) {
+			float lineWidth = Math.abs(line.x1 - line.x2);
+			if( lineWidth <= maxBitmapWidth ) {
+				int rowNum = (int)(line.y2 / maxBitmapHeight);
+				while( rowNum >= lineRows.size() ) {
+					lineRows.add(new LinesRow());
 				}
+				LinesRow row = lineRows.get(rowNum);
+				if( row.restartX < 0)
+					row.restartX = Math.min(line.x1, line.x2);
+				float groupRight = Math.max(line.x1, line.x2) - row.restartX;
+				// Start another group
+				if( groupRight > maxBitmapWidth ) {
+					row.activeGroup++;
+					row.restartX = Math.min(line.x1, line.x2);
+				}
+				if( row.activeGroup >= row.size() )
+					row.add(new HashSet<Line>());
+				row.get(row.activeGroup).add(line);
 			}
-
-			// Populate linesGroups with existing groups of lines
-			linesGroups.clear();
-			for( LinesRow row : lineRows ) {
-				for( Set<Line> group : row ) {
-					if( group.size() > 0 )
-						linesGroups.add(group);
-				}
+		}
+		// Populate linesGroups with existing groups of lines
+		lineGroups.clear();
+		for( LinesRow row : lineRows ) {
+			for( Set<Line> group : row ) {
+				if( group.size() > 0 )
+					lineGroups.add(group);
 			}
 		}
 	}
@@ -549,9 +588,22 @@ public class Animator {
 		}
 	}
 
+	/*@Override
+	public String toString() {
+		String txt = "";
+		for( Row row : unionRows )
+			txt += row + "\n";
+		return txt;
+	}*/
+
 	@Override
 	public String toString() {
 		String txt = "";
+		for( Group group : groups ) {
+			txt += group.generation + ": ";
+			txt += group + "\n";
+		}
+		txt += "- - - - - - - - - - -\n";
 		for( Row row : unionRows )
 			txt += row + "\n";
 		return txt;

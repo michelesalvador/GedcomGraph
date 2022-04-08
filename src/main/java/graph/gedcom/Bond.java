@@ -6,6 +6,7 @@ public class Bond extends Metric {
 
 	public String marriageDate;
 	public FamilyNode familyNode;
+	float overlap;
 
 	Bond(FamilyNode familyNode) {
 		this.familyNode = familyNode;
@@ -23,7 +24,7 @@ public class Bond extends Metric {
 
 	@Override
 	void setX(float x) {
-		this.x = x;
+		this.x = x - overlap;
 	}
 
 	@Override

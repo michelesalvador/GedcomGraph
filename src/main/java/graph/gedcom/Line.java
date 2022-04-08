@@ -11,4 +11,9 @@ public abstract class Line implements Comparable<Line> {
 	public int compareTo(Line line) {
 		return Float.compare(Math.min(x1, x2), Math.min(line.x1, line.x2));
 	}
+
+	@Override
+	public String toString() {
+		return x1 + "/" + y1 + " - " + x2 + "/" + y2;
+	}
 }

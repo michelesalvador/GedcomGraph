@@ -1,6 +1,6 @@
 # GedcomGraph
 
-GedcomGraph is a Java library that creates a graphic model of a genealogical tree on top of a [Gedcom 5 Java](https://github.com/FamilySearch/gedcom5-java) object.
+GedcomGraph is a Java library that creates a graphic model of a genealogical tree on top of a [GEDCOM 5 Java](https://github.com/FamilySearch/gedcom5-java) object.
 
 GedcomGraph doesn't produce any kind of graphic output, but only the Java model of a genealogical tree on a cartesian plane, with the center on the top-left corner.  
 To become a visible diagram, a further graphical implementation is needed, such a Java Canvas or an Android app.

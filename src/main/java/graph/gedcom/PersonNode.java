@@ -4,6 +4,7 @@ import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
+import graph.gedcom.Util.Card;
 import java.util.ArrayList;
 import java.util.List;
 import static graph.gedcom.Util.*;
@@ -104,8 +105,8 @@ public class PersonNode extends Node {
 	}
 
 	@Override
-	boolean isAncestor() {
-		return isAncestor;
+	boolean isMultiMarriage() {
+		return familyNode != null && familyNode.isMultiMarriage();
 	}
 
 	// Recoursive count of direct ancestors
@@ -153,12 +154,6 @@ public class PersonNode extends Node {
 		return type == Card.FULCRUM;
 	}
 
-	/*public CurveLine getLine() {
-		if( origin != null && line == null )
-			line = new CurveLine(this);
-		return line;
-	}*/
-
 	@Override
 	public float centerRelX() {
 		return width / 2;
@@ -195,12 +190,15 @@ public class PersonNode extends Node {
 	@Override
 	public String toString() {
 		if (mini)
-			return amount + " (" + Util.essence(person) + ")";
+			return amount + " (" + essence(person) + ")";
 		else {
-			String txt = Util.essence(person);
+			String txt = "";
+			txt += essence(person);
 			//txt += origin != null ? " " + origin.getChildren().indexOf(this) : " -";
 			//txt += " " + generation;
 			//txt += " " + person.getId();
+			//txt += " " + (group != null ? group : "null"); // Produce stackoverflow
+			//txt += " " + (group != null ? group.branch : "group=null");
 			return txt;
 		}
 	}
