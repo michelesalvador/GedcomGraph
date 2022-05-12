@@ -18,9 +18,11 @@ public class NextLine extends Line {
 
 	@Override
 	void update() {
-		x1 = bond.centerX();
-		y1 = bond.centerY();
-		x2 = side == Side.LEFT ? bond.x : partner.x; // otherwise partner.centerX();
-		y2 = partner.centerY();
+		if( bond != null ) {
+			x1 = bond.centerX();
+			y1 = bond.centerY();
+			x2 = side == Side.LEFT ? bond.x : partner.x; // otherwise partner.centerX();
+			y2 = partner.centerY();
+		}
 	}
 }

@@ -10,7 +10,7 @@ public class Group extends Metric {
 
 	List<Node> list; // List of PersonNodes and FamilyNodes of siblings and brothers-in-law, children of the origin
 	Node origin; // Is the same origin of the Person or Family nodes of the list
-	FamilyNode stallion; // The main (NEAR) node when this group is a multi marriage only, that is without siblings
+	Node stallion; // The main (NEAR) node when this group is a multi marriage only, that is without siblings
 	int generation;
 	boolean mini;
 	Branch branch;
@@ -77,13 +77,13 @@ public class Group extends Metric {
 	}
 
 	// If this group is a multimarriage only (without any sibling) returns the main person node, otherwise returns null.
-	private FamilyNode getStallion() {
-		FamilyNode nearNode = null;
+	private Node getStallion() {
+		Node nearNode = null;
 		for( Node node : list ) {
 			if( !node.isMultiMarriage() )
 				return null;
-			else if( node instanceof FamilyNode && ((FamilyNode)node).match == Match.NEAR )
-				nearNode = (FamilyNode)node;
+			else if( node.match == Match.NEAR )
+				nearNode = node;
 		}
 		return nearNode;
 	}
@@ -94,7 +94,7 @@ public class Group extends Metric {
 			origin.setX(stallion.x + stallion.getLeftWidth(branch) - origin.centerRelX());
 		else {
 			x = list.get(0).x;
-			origin.setX(x + getLeftWidth(branch) + getCentralWidth(branch) / 2 - origin.centerRelX());
+			origin.setX(x + getLeftWidth() + getCentralWidth() / 2 - origin.centerRelX());
 		}
 	}
 
@@ -104,13 +104,23 @@ public class Group extends Metric {
 		origin.setY(y - (list.size() > 1 && stallion == null ? LITTLE_GROUP_DISTANCE : ANCESTRY_DISTANCE) - origin.height);
 	}
 
+	float leftX() {
+		//return x + getLeftWidth(null); // OK
+		return x;
+	}
+
+	float rightX() {
+		//return x + getLeftWidth(null) + getCentralWidth(null); // OK
+		return x + getWidth();
+	}
+
 	// Excluded acquired spouses at right
 	@Override
 	public float centerRelX() {
 		if( stallion != null )
 			return stallion.x + stallion.getLeftWidth(branch) - x;
 		else
-			return getLeftWidth(branch) + getCentralWidth(branch) / 2;
+			return getLeftWidth() + getCentralWidth() / 2;
 	}
 
 	@Override
@@ -142,22 +152,28 @@ public class Group extends Metric {
 		}
 	}
 
+	void updateX() {
+		x = list.get(0).x;
+	}
+
+	void shift(float run) {
+		setX(x + run);
+	}
+
 	// Total width of the group considering all nodes
 	float getWidth() {
-		if( width == 0 ) {
-			Node lastChild = list.get(list.size() - 1);
-			width = lastChild.x + lastChild.width - x;
-		}
+		Node lastChild = list.get(list.size() - 1);
+		width = lastChild.x + lastChild.width - x;
 		return width;
 	}
 
 	// Group left width relative to the first not-multimarriage node, including acquired spouses
-	float getLeftWidth(Branch branch) {
+	float getLeftWidth() {
 		return list.get(0).getLeftWidth(branch);
 	}
 
-	// Children's center-to-center width excluding acquired spouses at the extremes
-	float getCentralWidth(Branch branch) {
+	// Children's center-to-center fixed width excluding acquired spouses at the extremes
+	float getBasicCentralWidth() {
 		float width = 0;
 		if( list.size() > 1 ) {
 			for( int i = 0; i < list.size(); i++ ) {
@@ -168,25 +184,25 @@ public class Group extends Metric {
 					pos = Position.LAST;
 				else
 					pos = Position.MIDDLE;
-				width += list.get(i).getMainWidth(pos, branch) + HORIZONTAL_SPACE;
+				width += list.get(i).getMainWidth(pos) + HORIZONTAL_SPACE;
 			}
 			width -= HORIZONTAL_SPACE;
 		}
 		return width;
 	}
 
-	// Experiment for group with no fixed width
-	/*float getCentralWidth(Branch branch) {
+	// Return the no fixed width of the group excluding acquired spouses at the extremes
+	float getCentralWidth() {
 		float width = 0;
 		if( list.size() > 1 ) {
 			Node first = list.get(0);
 			Node last = list.get(list.size()-1);
-			width = first.getMainWidth(Position.FIRST, branch)
+			width = first.getMainWidth(Position.FIRST)
 					+ last.x - (first.x + first.width)
-					+ last.getMainWidth(Position.LAST, branch);
+					+ last.getMainWidth(Position.LAST);
 		}
 		return width;
-	}*/
+	}
 
 	float getHeight() {
 		height = 0;
@@ -199,8 +215,8 @@ public class Group extends Metric {
 	public String toString() {
 		String txt = "";
 		txt += list;
-		//txt += " " + hashCode();
 		//txt += " " + branch;
+		//txt += " " + hashCode();
 		return txt;
 	}
 }

@@ -12,23 +12,27 @@ public class BackLine extends Line {
 	Side side;
 	Match match;
 	boolean noPartners;
+	FamilyNode node;
 
 	public BackLine(FamilyNode familyNode) {
 		bond = familyNode.bond;
 		side = familyNode.side;
 		match = familyNode.match;
 		noPartners = familyNode.partners.isEmpty();
+		node = familyNode;
 	}
 
 	@Override
 	void update() {
-		x1 = side == Side.LEFT ? bond.x + bond.width + HORIZONTAL_SPACE : bond.x - HORIZONTAL_SPACE;
-		y1 = bond.centerY();
-		if( bond.marriageDate != null )
-			x2 = side == Side.LEFT ? bond.x + bond.width : bond.x;
-		else			
-			x2 = noPartners && match == Match.MIDDLE ? side == Side.LEFT ? bond.x + bond.overlap : bond.x + bond.width - bond.overlap
-				: bond.centerX();
-		y2 = bond.centerY();
+		if( bond != null ) {
+			x1 = side == Side.LEFT ? node.next.x : node.prev.x + node.prev.width;
+			y1 = bond.centerY();
+			if( bond.marriageDate != null )
+				x2 = side == Side.LEFT ? bond.x + bond.width : bond.x;
+			else
+				x2 = noPartners && match == Match.MIDDLE ? side == Side.LEFT ? bond.x + bond.overlap : bond.x + bond.width - bond.overlap
+					: bond.centerX();
+			y2 = bond.centerY();
+		}
 	}
 }

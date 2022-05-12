@@ -9,8 +9,13 @@ public class Genus extends ArrayList<Node> {
 	
 	@Override
 	public String toString() {
-		String txt = "";
-		txt += toString();
+		String txt = "[";
+		for( Node node : this ) {
+			txt += node;
+			txt += " " + node.match;
+			txt += " - ";
+		}
+		txt = txt.replaceAll(" - $", "]");
 		return txt;
 	}
 }

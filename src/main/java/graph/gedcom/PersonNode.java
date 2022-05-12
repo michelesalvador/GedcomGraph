@@ -4,7 +4,6 @@ import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
-import graph.gedcom.Util.Card;
 import java.util.ArrayList;
 import java.util.List;
 import static graph.gedcom.Util.*;
@@ -104,11 +103,6 @@ public class PersonNode extends Node {
 		return null;
 	}
 
-	@Override
-	boolean isMultiMarriage() {
-		return familyNode != null && familyNode.isMultiMarriage();
-	}
-
 	// Recoursive count of direct ancestors
 	private void countAncestors(Person ancestor) {
 		if( amount <= 100 ) {
@@ -175,7 +169,7 @@ public class PersonNode extends Node {
 	}
 
 	@Override
-	float getMainWidth(Position pos, Branch branch) {
+	float getMainWidth(Position pos) {
 		if( pos == Position.MIDDLE )
 			return width;
 		else
@@ -193,7 +187,8 @@ public class PersonNode extends Node {
 			return amount + " (" + essence(person) + ")";
 		else {
 			String txt = "";
-			txt += essence(person);
+			//txt += " " + Math.floor(force);
+			txt += " " + essence(person);
 			//txt += origin != null ? " " + origin.getChildren().indexOf(this) : " -";
 			//txt += " " + generation;
 			//txt += " " + person.getId();

@@ -8,6 +8,7 @@ package graph.gedcom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import static graph.gedcom.Util.*;
 
 public class Union extends Metric {
 
@@ -40,13 +41,17 @@ public class Union extends Metric {
 		return list.get(0).generation;
 	}
 
+	void updateX() {
+		x = list.get(0).x;
+	}
+
 	// Excluded spuses at extremes
 	@Override
 	public float centerRelX() {
 		Group group = list.get(0).getGroup();
 		if( group.stallion != null )
 			return group.stallion.getLeftWidth(null);
-		return group.getLeftWidth(null) + group.getCentralWidth(null) / 2;
+		return group.getLeftWidth() + group.getCentralWidth() / 2;
 	}
 
 	@Override
@@ -112,13 +117,11 @@ public class Union extends Metric {
 
 	// Total width of the union considering all nodes
 	float getWidth() {
-		if( width == 0 ) {
-			Node lastChild = list.get(list.size() - 1);
-			if( list.size() == 1 )
-				width = lastChild.width;
-			else
-				width = lastChild.x + lastChild.width - x;
-		}
+		Node lastChild = list.get(list.size() - 1);
+		if( list.size() == 1 )
+			width = lastChild.width;
+		else
+			width = lastChild.x + lastChild.width - x;
 		return width;
 	}
 

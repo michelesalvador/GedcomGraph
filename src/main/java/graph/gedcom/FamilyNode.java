@@ -17,7 +17,6 @@ public class FamilyNode extends Node {
 	List<PersonNode> partners;
 	Bond bond;
 	Side side; // Following or previous marriage: LEFT is a husband, RIGHT is a wife
-	Match match; // Number of the relationship: SOLE, NEAR the central one, MIDDLE, or LAST at extreme left (with husband) or right (with wife)
 
 	public FamilyNode(Family spouseFamily, boolean mini, Side side) {
 		this.spouseFamily = spouseFamily;
@@ -91,11 +90,6 @@ public class FamilyNode extends Node {
 		return null;
 	}
 
-	@Override
-	boolean isMultiMarriage() {
-		return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
-	}
-
 	// Add a spouse to this family
 	void addPartner(PersonNode partner) {
 		this.partners.add(partner);
@@ -105,10 +99,10 @@ public class FamilyNode extends Node {
 
 	// Crate bond if there are no partners or many partners
 	void createBond() {
-		if( partners.size() == 1 && (mini || side == Side.NONE)  )
+		if( partners.size() == 1 && match != Match.MIDDLE && match != Match.FAR )
 			return;
 		bond = new Bond(this);
-		if( !mini ) {
+		if( !mini && partners.size() > 0 ) {
 			// GEDCOM date of the marriage
 			for( EventFact ef : spouseFamily.getEventsFacts() ) {
 				if( ef.getTag().equals("MARR") )
@@ -186,11 +180,11 @@ public class FamilyNode extends Node {
 	}
 
 	@Override
-	float getMainWidth(Position pos, Branch branch) {
+	float getMainWidth(Position pos) {
 		float size = 0;
 		int index = partners.indexOf(getMainPersonNode());
 		if( pos == Position.FIRST ) {
-			if( branch == Branch.MATER ) {
+			if( group.branch == Branch.MATER ) {
 				size = getWife().centerRelX();
 			} else if(getMainPersonNode() != null) {
 				size = getMainPersonNode().centerRelX();
@@ -223,6 +217,7 @@ public class FamilyNode extends Node {
 			txt = txt.replaceAll(", $", "");
 		//txt += " " + hashCode();
 		//txt += " " + match;
+		//txt += " " + group.branch;
 		txt += "}";
 		return txt;
 	}

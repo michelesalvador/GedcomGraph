@@ -23,7 +23,8 @@ public class Animator {
 	List<LinesRow> backLineRows; // All the back (dashed) lines divided in groups in a 2D array
 	List<Set<Line>> backLineGroups; // All the back (dashed) lines distributed in groups by proximity
 	List<Group> groups; // Array of groups of PersonNodes and FamilyNodes (not mini)
-	List<Row> unionRows; // Array of rows of Unions
+	List<GroupRow> groupRows;
+	List<UnionRow> unionRows; // Array of rows of Unions
 	int maxBitmapWidth, maxBitmapHeight;
 	float prevTotalForces;
 	float maxForces;
@@ -41,6 +42,7 @@ public class Animator {
 		backLineRows = new ArrayList<>();
 		backLineGroups = new ArrayList<>();
 		groups = new ArrayList<>();
+		groupRows = new ArrayList<>();
 		unionRows = new ArrayList<>();
 		allFractions = new ArrayList<>();
 	}
@@ -97,9 +99,11 @@ public class Animator {
 
 		// Vertical position of the generation rows
 		unionRows.clear();
+		groupRows.clear();
 		float posY = rowMaxHeight[0] / 2;
 		for( int gen = -maxAbove; gen < totalRows - maxAbove; gen++ ) {
-			unionRows.add(new Row(gen, posY));
+			unionRows.add(new UnionRow(gen, posY));
+			groupRows.add(new GroupRow(gen));
 			if( gen + maxAbove < totalRows - 1 )
 				posY += rowMaxHeight[gen + maxAbove] / 2 + VERTICAL_SPACE + rowMaxHeight[gen + maxAbove + 1] / 2;
 		}
@@ -113,11 +117,13 @@ public class Animator {
 		lines.clear();
 		backLines.clear();
 		for( Node node : nodes ) {
+			// Curve lines
 			for( PersonNode personNode : node.getPersonNodes() ) {
 				if( personNode.getOrigin() != null ) {
 					lines.add(new CurveLine(personNode));
 				}
 			}
+			// All other lines
 			if( node instanceof FamilyNode ) {
 				FamilyNode familyNode = (FamilyNode)node;
 				if( familyNode.partners.size() > 0 && (familyNode.match == Match.MIDDLE || familyNode.match == Match.FAR) )
@@ -131,11 +137,35 @@ public class Animator {
 			}
 		}
 
+		// Populate groupRows from groups
+		for( Group group : groups ) {
+			if( !group.mini && !group.list.isEmpty() ) {
+				groupRows.get(group.generation + maxAbove).add(group);
+			}
+		}
+
+		// Add prev and next to each node
+		for( GroupRow row : groupRows ) {
+			Node previous = null;
+			for( Group group : row ) {
+				for( int n = 0; n < group.list.size(); n++ ) {
+					Node node = group.list.get(n);
+					if( !(node.getPersonNodes().isEmpty() && node.isAncestor) ) { // Empty ancestors are excluded
+						if( !node.equals(previous) )
+							node.prev = previous;
+						if( node.prev != null )
+							node.prev.next = node;
+						previous = node;
+					}
+				}
+			}
+		}
+
 		// Populate unionRows from groups
 		// Couples of ancestors groups with common ancestor node are joined in a single Union
 		for( Group group : groups ) {
 			if( !group.mini && !group.list.isEmpty() ) {
-				Row row = unionRows.get(group.generation + maxAbove);
+				UnionRow row = unionRows.get(group.generation + maxAbove);
 				Union union = null;
 				boolean joinExistingGroup = false;
 				find:
@@ -151,7 +181,6 @@ public class Animator {
 						}
 						union = new Union();
 						union.ancestor = node;
-						union.ancestor.union = union;
 						break;
 					}
 				}
@@ -173,19 +202,21 @@ public class Animator {
 					union.list.addAll(group.list);
 					row.addUnion(union);
 				}
+				for( Node node : union.list )
+					node.union = union; // TODO A ben guardare assegna 2 volte la union ai medesimi nodi
 			}
 		}
 	}
 
 	// At this point marriage bonds are added in the layout
 
-	// First positioning of all nodes, with some nodes still possibly overlapping
+	// First positioning of all nodes, resolving all the overlaps
 	public void placeNodes() {
 
 		// Vertical positioning
 
 		// Vertically place each regular (not mini) node
-		for( Row row : unionRows ) {
+		for( UnionRow row : unionRows ) {
 			for( Union union : row ) {
 				union.y = row.yAxe - union.centerRelY();
 				for( Node node : union.list ) {
@@ -211,124 +242,93 @@ public class Animator {
 
 		// Horizontal positioning
 
-		// Place horizontally the nodes of the fulcrum generation
-		float posX = 0;
-		for( Node node : fulcrumNode.getGroupList() ) {
-			node.setX(posX);
-			posX += node.width + HORIZONTAL_SPACE;
-			placeChildren(node);
+		// The fulcrum family could be the only one and need to be placed
+		if( fulcrumNode.familyNode != null ) {
+			fulcrumNode.familyNode.setX(0);
 		}
 
-		// Place fulcrum's ancestors and uncles with a recoursive method
-		Node fulcrumOrigin = fulcrumNode.getOrigin();
-		if( fulcrumOrigin != null ) {
-			placeAncestors(fulcrumOrigin, Branch.NONE);
+		// Ascend generations resolving overlaps and disposing ancestors and uncles
+		// starting from generation -1 (if exists) or from fulcrum generation up
+		for( int r = maxAbove > 0 ? maxAbove - 1 : maxAbove; r >= 0; r-- ) {
+			GroupRow groupRow = groupRows.get(r);
+			groupRow.resolveOverlap();
+			// Place ancestors of the above generation
+			for( Group group : groupRow ) {
+				Node ancestor = group.origin;
+				if( ancestor != null ) {
+					group.placeOriginX();
+					Union union = ancestor.union;
+					if( union != null ) {
+						// Place paternal uncles
+						float posX = ancestor.x;
+						for( int i = union.list.indexOf(ancestor) - 1; i >= 0; i-- ) {
+							Node node = union.list.get(i);
+							posX -= node.width + HORIZONTAL_SPACE;
+							node.setX(posX);
+						}
+						// Place maternal uncles
+						posX = ancestor.x + ancestor.width + HORIZONTAL_SPACE;
+						for( int i = union.list.indexOf(ancestor) + 1; i < union.list.size(); i++ ) {
+							Node node = union.list.get(i);
+							node.setX(posX);
+							posX += node.width + HORIZONTAL_SPACE;
+						}
+					}
+				}
+			}
 		}
-		//placeAncestors(fulcrumNode);
+
+		// Position the descendants starting from generation -1 (if existing) or from fulcrum generation down
+		for( int r = maxAbove > 0 ? maxAbove - 1 : maxAbove; r < unionRows.size(); r++ ) {
+			UnionRow unionRow = unionRows.get(r);
+			unionRow.resolveOverlap();
+			for( Union union : unionRow ) {
+				for( Node node : union.list ) {
+					Group youth = node.youth;
+					if( youth != null && !youth.mini ) { // Existing regular children only
+						// Place stallion child and their spouses
+						if( youth.stallion != null ) {
+							youth.stallion.setX(node.centerX() - youth.stallion.getLeftWidth(null));
+							Node right = youth.stallion;
+							while( right.next != null ) {
+								right.next.setX(right.x + right.width + HORIZONTAL_SPACE);
+								right = right.next;
+							}
+							Node left = youth.stallion;
+							while( left.prev != null ) {
+								left.prev.setX(left.x - HORIZONTAL_SPACE - left.prev.width);
+								left = left.prev;
+							}
+						} else { // Place normal youth
+							float posX = node.centerX() - youth.getLeftWidth() - youth.getBasicCentralWidth() / 2;
+							for( Node child : youth.list ) {
+								child.setX(posX);
+								posX += child.width + HORIZONTAL_SPACE;
+							}
+						}
+					}
+				}
+			}
+		}
 
 		// Horizontally place acquired mini ancestry and all mini progeny
 		for( Node node : nodes ) {
 			node.placeAcquiredOriginX();
 			node.placeMiniChildrenX();
 		}
-		
+
 		setDiagramBounds();
 
 		// Update unions x position and width
-		for( Row row : unionRows ) {
+		for( UnionRow row : unionRows ) {
 			for( Union union : row ) {
-				union.x = union.list.get(0).x;
+				union.updateX();
 				union.width = union.getWidth();
 			}
 		}
-
 		prevTotalForces = 0;
 		maxForces = 0;
 		allFractions.clear();
-	}
-
-	// Experimental alternative method that requires the node itself instead of its origin
-	/*private void placeAncestors(PersonNode personNode) {
-		Node ancestorNode = personNode.getOrigin();
-		if( ancestorNode != null ) {
-			ancestorNode.setX(personNode.centerX() - ancestorNode.centerRelX());
-			Union union = ancestorNode.union;
-			if( union != null ) {
-				// Place paternal uncles
-				float posX = ancestorNode.x;
-				for( int i = union.list.indexOf(ancestorNode) - 1; i >= 0; i-- ) {
-					Node node = union.list.get(i);
-					posX -= node.width + HORIZONTAL_SPACE;
-					node.setX(posX);
-					// Cousins
-					if( node.generation == -1 ) {
-						placeChildren(node);
-					}
-				}
-				// Place maternal uncles
-				posX = ancestorNode.x + ancestorNode.width + HORIZONTAL_SPACE;
-				for( int i = union.list.indexOf(ancestorNode) + 1; i < union.list.size(); i++ ) {
-					Node node = union.list.get(i);
-					node.setX(posX);
-					posX += node.width + HORIZONTAL_SPACE;
-					// Cousins
-					if( node.generation == -1 ) {
-						placeChildren(node);
-					}
-				}
-				for( PersonNode partner : ancestorNode.getPersonNodes() )
-					placeAncestors(partner);
-			}
-		}
-	}*/
-
-	// Recursive method to horizontally place ancestors and uncles
-	private void placeAncestors(Node ancestorNode, Branch branch) {
-		ancestorNode.centerToYouth(branch);
-		Union union = ancestorNode.union;
-		if( union != null ) {
-			// Place paternal uncles
-			float posX = ancestorNode.x;
-			for( int i = union.list.indexOf(ancestorNode) - 1; i >= 0; i-- ) {
-				Node node = union.list.get(i);
-				posX -= node.width + HORIZONTAL_SPACE;
-				node.setX(posX);
-				// Cousins
-				if( node.generation == -1) {
-					placeChildren(node);
-				}
-			}
-			// Place maternal uncles
-			posX = ancestorNode.x + ancestorNode.width + HORIZONTAL_SPACE;
-			for( int i = union.list.indexOf(ancestorNode) + 1; i < union.list.size(); i++ ) {
-				Node node = union.list.get(i);
-				node.setX(posX);
-				posX += node.width + HORIZONTAL_SPACE;
-				// Cousins
-				if( node.generation == -1) {
-					placeChildren(node);
-				}
-			}
-			// Recoursive calls
-			for( Node origin: union.getOrigins() ) {
-				origin.youth.x = origin.youth.list.get(0).x; // Update youth's x position
-				placeAncestors(origin, origin.youth.branch);
-			}
-		}
-	}
-
-	// Recoursive horizontal position of all the regular children nodes
-	void placeChildren(Node node) {
-		Group youth = node.youth;
-		if( youth != null && !youth.mini ) { // Existing regular children only
-			float posX = node.centerX() - youth.getLeftWidth(Branch.NONE) - youth.getCentralWidth(Branch.NONE) / 2;
-			float distance = youth.mini ? PROGENY_PLAY : HORIZONTAL_SPACE;
-			for( Node child : youth.list ) {
-				child.setX(posX);
-				posX += child.width + distance;
-				placeChildren(child);
-			}
-		}
 	}
 
 	/** Generate the next position of each node and line, resolving overlaps.
@@ -341,35 +341,92 @@ public class Animator {
 			node.force = 0;
 		}
 
-		// Detect collision between overlapping unions of the same generation
-		for( Row row : unionRows ) {
-			float prevOverlap = 0;
+		// Loop inside groups and inside nodes to distribute forces
+		for(GroupRow row : groupRows) {
 			for( int i = 0; i < row.size(); i++ ) {
-				Union union = row.get(i);
-				float nextOverlap = 0;
-				if( i < row.size() - 1 ) {
-					Union nextUnion = row.get(i + 1);
-					float marginRight = union.x + union.getWidth() + UNION_DISTANCE;
-					nextOverlap = marginRight - nextUnion.x;
-					if( nextOverlap > 0 ) { // Repulsion between unions
-						// Shift to the left this union
-						union.setForce(-nextOverlap);
+				Group group = row.get(i);
+				group.updateX();
+				Node origin = group.origin;
+
+				// Align origin centered above group
+				/*if( origin != null && !origin.mini  ) {
+					float distance = group.centerX() - origin.centerX();
+					origin.setForce(distance);
+				}*/
+
+				// Keep origin node inside margins of youth group
+				if( origin != null && !origin.mini ) {
+					float distance = group.centerX() - origin.centerX();
+					float push = 0;
+					if( distance > 0 ) {
+						push = Math.max(0, group.leftX() - origin.centerX());
+					} else if( distance < 0 )
+						push = Math.min(0, group.rightX() - origin.centerX());
+					origin.setForce(push);
+				}
+
+				// Align group below origin respecting distance from other groups
+				if( origin != null && !origin.mini && row.generation >= 0 ) {
+					float distance = (origin.centerX() - group.centerX());
+					/*if( distance > 0 && i < row.size() - 1 ) {
+						Group nextGroup = row.get(i + 1);
+						distance = Math.min(0, nextGroup.x - (group.x + group.getWidth() + UNION_DISTANCE));
+					} else if( distance < 0 && i > 0 ) {
+						Group prevGroup = row.get(i - 1);
+						distance = Math.max(0, prevGroup.x + prevGroup.getWidth() + UNION_DISTANCE - group.x);
+					}*/
+					group.setForce(distance);
+				}
+
+				// Keep youth group almost below origin
+				/*if( origin != null && !origin.mini ) {
+					float distance = origin.centerX() - group.centerX();
+					float push = 0;
+					if( distance > 0 ) {
+						push = Math.min(0, origin.centerX() - group.leftX());
+					} else if( distance < 0 )
+						push = Math.max(0, origin.centerX() - group.rightX());
+					group.setForce(push);
+				}*/
+
+				// Keep each node near the next one of the same group
+				for( int n = 0; n < group.list.size() - 1; n++ ) {
+					Node node = group.list.get(n);
+					Node nextNode = group.list.get(n + 1);
+					float marginRight = node.x + node.width + HORIZONTAL_SPACE;
+					float overlap = (marginRight - nextNode.x) /1;
+					if( overlap < 0 ) { // If they are distant only
+						node.setForce(-overlap);
+						nextNode.setForce(overlap);
+					}
+				}
+
+				// Distance each group from the next of the same generation
+				/*if( i < row.size() - 1 ) {
+					Group nextGroup = row.get(i + 1);
+					group.updateX();
+					nextGroup.updateX();
+					float marginRight = group.x + group.getWidth() + UNION_DISTANCE;
+					float groupOverlap = marginRight - nextGroup.x;
+					if( groupOverlap > 0 && !group.containsAncestor() ) { // Repulsion between groups  	row.generation >= 0 &&
+						// Shift to the left this group
+						group.setForce(-groupOverlap);
 						// and all the unions to its left
 						for( int l = i; l > 0; l-- ) {
-							Union leftUnion = row.get(l);
-							Union prevLeftUnion = row.get(l - 1);
-							float leftOverlap = prevLeftUnion.x + prevLeftUnion.getWidth() + UNION_DISTANCE	- leftUnion.x;
+							Group leftUnion = row.get(l);
+							Group prevLeftUnion = row.get(l - 1);
+							float leftOverlap = prevLeftUnion.x + prevLeftUnion.getWidth() + UNION_DISTANCE - leftUnion.x;
 							if( leftOverlap > 0 )
 								prevLeftUnion.setForce(-nextOverlap);
 							else
 								break;
 						}
-						// Shift to the right this union
-						nextUnion.setForce(nextOverlap);
+						// Shift to the right next group
+						nextGroup.setForce(groupOverlap);
 						// and all the unions to its right
 						for( int r = i + 1; r < row.size() - 1; r++ ) {
-							Union rightUnion = row.get(r);
-							Union nextRightUnion = row.get(r + 1);
+							Group rightUnion = row.get(r);
+							Group nextRightUnion = row.get(r + 1);
 							float rightOverlap = rightUnion.x + rightUnion.getWidth() + UNION_DISTANCE - nextRightUnion.x;
 							if( rightOverlap > 0 )
 								nextRightUnion.setForce(nextOverlap);
@@ -377,88 +434,7 @@ public class Animator {
 								break;
 						}
 					}
-				}
-
-				if( i == 0 )
-					prevOverlap = Integer.MIN_VALUE;
-				if( i == row.size() - 1 )
-					nextOverlap = Integer.MIN_VALUE;
-				// Try to center descendants below the origin
-				Node origin = union.getOrigin();
-				if( row.generation >= 0 && origin != null && !origin.mini ) {
-					float distance = origin.centerX() - union.centerX();
-					float push = 0;
-					if( distance > 0 )
-						push = Math.min(distance, -nextOverlap);
-					else if( distance < 0)
-						push = Math.max(distance, prevOverlap);
-					union.setForce(push);
-					// This union moving to the left drags unions at its right
-					if( push < 0 ) {
-						for( int r = i + 1; r < row.size(); r++ ) {
-							Union rightUnion = row.get(r);
-							Node rightOrigin = rightUnion.getOrigin();
-							float rightDistance = rightOrigin.centerX() - rightUnion.centerX();
-							if( rightDistance < 0 ) {
-								push = Math.max(rightDistance, push);
-								rightUnion.setForce(push, 2);
-							} else
-								break;
-						}
-					} // This union moving to the right drags unions at its left
-					else if( push > 0 ) {
-						for( int l = i - 1; l >= 0; l-- ) {
-							Union leftUnion = row.get(l);
-							Node leftOrigin = leftUnion.getOrigin();
-							float leftDistance = leftOrigin.centerX() - leftUnion.centerX();
-							if( leftDistance > 0 ) {
-								push = Math.min(leftDistance, push);
-								leftUnion.setForce(push, 2);
-							} else
-								break;
-						}
-					}
-				}
-
-				// Try to center hancestors above descendants
-				if( row.generation < -1 ) {
-					Group youth = union.ancestor.youth;
-					youth.x = youth.list.get(0).x;
-					float distance = youth.centerX() - union.ancestor.centerX();
-					float push = 0;
-					if( distance > 0 )
-						push = Math.min(distance, -nextOverlap);
-					else if( distance < 0)
-						push = Math.max(distance, prevOverlap);
-					union.setForce(push);
-					// This union moving to the left drags unions at its right
-					if( push < 0 ) {
-						for( int r = i + 1; r < row.size(); r++ ) {
-							Union rightUnion = row.get(r);
-							Group rightYouth = rightUnion.ancestor.youth;
-							rightYouth.x = rightYouth.list.get(0).x;
-							float rightDistance = rightYouth.centerX() - rightUnion.ancestor.centerX();
-							if( rightDistance < 0 ) {
-								push = Math.max(rightDistance, push);
-								rightUnion.setForce(push, 1);
-							} else
-								break;
-						}
-					} // This union moving to the right drags unions at its left
-					else if( push > 0 ) {
-						for( int l = i - 1; l >= 0; l-- ) {
-							Union leftUnion = row.get(l);
-							Group leftYouth = leftUnion.ancestor.youth;
-							float leftDistance = leftYouth.centerX() - leftUnion.ancestor.centerX();
-							if( leftDistance > 0 ) {
-								push = Math.min(leftDistance, push);
-								leftUnion.setForce(push, 1);
-							} else
-								break;
-						}
-					}
-				}
-				prevOverlap = nextOverlap;
+				}*/
 			}
 		}
 
@@ -467,6 +443,8 @@ public class Animator {
 		for( Node node : nodes ) {
 			totalForces += Math.abs(node.applyForce());
 		}
+
+		resolveOverlap();
 
 		// Place horizontally acquired mini ancestry and all mini progeny
 		for( Group group : groups ) {
@@ -483,9 +461,9 @@ public class Animator {
 		setDiagramBounds();
 
 		// Update unions x position
-		for( Row row : unionRows ) {
+		for( UnionRow row : unionRows ) {
 			for( Union union : row ) {
-				union.x = union.list.get(0).x;
+				union.updateX();
 			}
 		}
 
@@ -499,6 +477,100 @@ public class Animator {
 		average /= allFractions.size();
 		return average > .04;
 	}
+
+	private void resolveOverlap() {
+		for(GroupRow groupRow : groupRows) {
+			groupRow.resolveOverlap();
+		}
+	}
+
+	// Other attempts to resolve overlaps after forces been applied
+
+	/*private float resolveOverlap() {
+		float forces = 0;
+		for( UnionRow row : unionRows) {
+			for( int i = 0; i < row.size(); i++ ) {
+				Union union = row.get(i);
+				if( i < row.size() - 1 ) {
+					union.updateX();
+					Union nextUnion = row.get(i + 1);
+					nextUnion.updateX();
+					float unionOverlap = (union.x + union.getWidth() + UNION_DISTANCE - nextUnion.x) / 2;
+					if( unionOverlap > 0 ) {
+						forces += unionOverlap;
+						union.setX(union.x - unionOverlap);
+						nextUnion.setX(nextUnion.x + unionOverlap);
+						union.shift(-unionOverlap);
+						nextUnion.shift(unionOverlap);
+					}
+				}
+				for( int n = 0; n < union.list.size() - 1; n++ ) {
+					Node node = union.list.get(n);
+					Node nextNode = union.list.get(n + 1);
+					float nodeOverlap = (node.x + node.width + HORIZONTAL_SPACE - nextNode.x) / 2;
+					if( nodeOverlap > 0 ) {
+						forces += nodeOverlap;
+						node.setX(node.x - nodeOverlap);
+						nextNode.setX(nextNode.x + nodeOverlap);
+						node.shift(-nodeOverlap);
+						nextNode.shift(nodeOverlap);
+					}
+				}
+			}
+		}
+		return forces;
+	}*/
+
+	/*private float resolveOverlap() {
+		float forces = 0;
+		for (Node node : nodes) {
+			if( node.prev != null ) {
+				float gap = node.union.equals(node.prev.union) ? HORIZONTAL_SPACE : UNION_DISTANCE;
+				float leftOver = (node.prev.x + node.prev.width + gap - node.x) / 2;
+				if( leftOver > 0 ) {
+					node.setX(node.x + leftOver);
+					node.shift(leftOver);
+					node.prev.shift(-leftOver);
+					node.prev.setX(node.prev.x - leftOver);
+					forces += leftOver;
+				}
+			}
+			if( node.next != null ) {
+				float gap = node.union.equals(node.next.union) ? HORIZONTAL_SPACE : UNION_DISTANCE;
+				float rightOver = (node.x + node.width + gap - node.next.x) / 2;
+				if( rightOver > 0 ) {
+					node.setX(node.x - rightOver);
+					node.shift(-rightOver);
+					node.next.shift(rightOver);
+					node.next.setX(node.next.x + rightOver);
+					forces += rightOver;
+				}
+			}
+		}
+		return forces;
+	}*/
+
+	/*private float resolveOverlap() {
+		float forces = 0;
+		for(GroupRow row : groupRows) {
+			for( int i = 0; i < row.size(); i++ ) {
+				Group group = row.get(i);
+				if( i < row.size() - 1 ) {
+					Group nextGroup = row.get(i + 1);
+					float marginRight = group.x + group.getWidth() + UNION_DISTANCE;
+					float groupOverlap = (marginRight - nextGroup.x) /2;
+					if( groupOverlap > 0 ) { // Repulsion between groups
+						forces += groupOverlap;
+						// Shift to the left this group
+						group.shift(-groupOverlap);
+						// Shift to the right next group
+						nextGroup.shift(groupOverlap);
+					}
+				}
+			}
+		}
+		return forces;
+	}*/
 
 	private void setDiagramBounds() {
 		// Find the diagram margins to fit exactly around every node
@@ -588,14 +660,6 @@ public class Animator {
 		}
 	}
 
-	/*@Override
-	public String toString() {
-		String txt = "";
-		for( Row row : unionRows )
-			txt += row + "\n";
-		return txt;
-	}*/
-
 	@Override
 	public String toString() {
 		String txt = "";
@@ -604,8 +668,24 @@ public class Animator {
 			txt += group + "\n";
 		}
 		txt += "- - - - - - - - - - -\n";
-		for( Row row : unionRows )
+		for( UnionRow row : unionRows )
 			txt += row + "\n";
 		return txt;
 	}
+
+	/*@Override
+	public String toString() {
+		String txt = "";
+		for( NodeRow row : nodeRows )
+			txt += row + "\n";
+		return txt;
+	}*/
+
+	/*@Override
+	public String toString() {
+		String txt = "";
+		for( GroupRow row : groupRows )
+			txt += row + "\n";
+		return txt;
+	}*/
 }

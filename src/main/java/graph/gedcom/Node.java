@@ -5,7 +5,6 @@ package graph.gedcom;
 import java.util.Collections;
 import java.util.List;
 import org.folg.gedcom.model.Family;
-import graph.gedcom.Util.Position;
 import static graph.gedcom.Util.*;
 
 public abstract class Node extends Metric {
@@ -13,27 +12,30 @@ public abstract class Node extends Metric {
 	// Contents
 	public Family spouseFamily; // The person in this node is spouse of this family
 	Group group; // List of siblings to which this node belongs
+	              // Warning: an ancestor node can belong at the same time to 2 groups, making this 'group' useless
 	Group youth; // List of PersonNode and FamilyNode descendants of a PersonNode or of a FamilyNode
 	public int generation; // Number of the generation to which this node belongs (0 for fulcrum, negative up and positive down)
 	public boolean mini; // The PersonNode will be displayed little (with just a number), and the familyNode without marriage date
 	boolean isAncestor;
 	Union union; // The union this node belongs to (expecially for ancestors)
 	float force; // Dynamic horizontal movement
+	Node prev, next; // Previous and next node on the same row (same generation)
+	Match match; // Number of the relationship: SOLE, NEAR the central one, MIDDLE, or LAST at extreme left (with husband) or right (with wife)
 
 	// Calculate the initial width of first node (complementar to getMainWidth())
 	abstract float getLeftWidth(Branch branch);
 
 	// Calculate the to-center width of the main node included bond and partner
-	abstract float getMainWidth(Position pos, Branch branch);
+	abstract float getMainWidth(Position pos);
 
 	/** Move this node in the center of children
 	* @param branch Paternal side (left) or maternal side (right)
 	*/
-	void centerToYouth(Branch branch) {
+	void centerToYouth() {
 		if( youth.stallion != null )
-			setX(youth.stallion.x + youth.stallion.getLeftWidth(branch) - centerRelX());
+			setX(youth.stallion.x + youth.stallion.getLeftWidth(null) - centerRelX());
 		else
-			setX(youth.x + youth.getLeftWidth(branch) + youth.getCentralWidth(branch) / 2 - centerRelX());
+			setX(youth.x + youth.getLeftWidth() + youth.getCentralWidth() / 2 - centerRelX());
 	}
 
 	// Horizontally distribute mini progeny nodes
@@ -112,10 +114,26 @@ public abstract class Node extends Metric {
 	abstract PersonNode getPartner(int id);
 
 	// This node is one of the three match: NEAR, MIDDLE or FAR
-	abstract boolean isMultiMarriage();
+	boolean isMultiMarriage() {
+		return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
+	}
 
 	void setForce(float push) {
 		force += push;
+	}
+
+	// Apply the overlap correction and propagate it to previous or next nodes
+	void shift(float run) {
+		setX(x + run);
+		if( run > 0 && next != null ) {
+			float rightOver = x + width + (union.equals(next.union) ? HORIZONTAL_SPACE : UNION_DISTANCE) - next.x;
+			if( rightOver > 0 )
+				next.shift(rightOver);
+		} else if( run < 0 && prev != null ) {
+			float leftOver = prev.x + prev.width + (union.equals(prev.union) ? HORIZONTAL_SPACE : UNION_DISTANCE) - x;
+			if( leftOver > 0 )
+				prev.shift(-leftOver);
+		}
 	}
 
 	// Apply the force

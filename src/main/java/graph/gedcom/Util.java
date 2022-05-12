@@ -33,7 +33,7 @@ public class Util {
 		FIRST, MIDDLE, LAST;
 	}
 
-	/* Used to point out a single or multi marriage in FamilyNode
+	/* Used to point out a node as single or multi marriage
 	 * SOLE: it's a single marriage only
 	 * NEAR: the marriage is close to the person
 	 * FAR: it's at left or right extreme

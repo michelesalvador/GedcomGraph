@@ -146,16 +146,19 @@ public class Graph {
 		// Create all the nodes of the diagram
 		List<Family> fulcrumParents = fulcrum.getParentFamilies(gedcom);
 		fulcrumGroup = createGroup(0, false, Branch.NONE);
-		if (!fulcrumParents.isEmpty()) {
+		if( !fulcrumParents.isEmpty() ) {
 
 			// Creation of parent nodes of fulcrum
-			if (whichFamily >= fulcrumParents.size())
+			if( whichFamily >= fulcrumParents.size() )
 				whichFamily = fulcrumParents.size() - 1; // To prevent IndexOutOfBoundsException
 			Family parentFamily = fulcrumParents.get(whichFamily);
 			boolean parentMini = ancestorGenerations == 0;
 			Group firstParentGroup = createGroup(-1, parentMini, null);
 			Node parentNode = createNodeFromFamily(parentFamily, -1, parentMini ? Card.ANCESTRY : Card.REGULAR);
 			parentNode.isAncestor = true;
+			boolean parentSingle = parentNode.getPersonNodes().size() == 1
+					&& parentNode.getPartner(0).person.getSpouseFamilyRefs().size() <= 1; // Single parent
+			parentNode.match = (!parentMini && !parentSingle) ? Match.NEAR : Match.SOLE;
 			Branch parentBranch = parentNode.getPersonNodes().size() > 1 ? Branch.PATER : Branch.NONE;
 			firstParentGroup.branch = parentBranch;
 			firstParentGroup.addNode(parentNode);
@@ -167,9 +170,9 @@ public class Graph {
 			// Find ancestors on the left
 			if (ancestorGenerations > 0 ) {
 				if( father != null) {
-					// Grand-parents
+					// Paternal grand-parents
 					findAncestors(father, firstParentGroup, 1);
-					// Uncles
+					// Paternal uncles
 					findUncles(father, firstParentGroup, parentNode.getPersonNodes().size() == 1 ? Side.LEFT : Side.NONE);
 				}
 				// Other marriages of the mother
@@ -192,7 +195,7 @@ public class Graph {
 
 			// Find ancestors on the right
 			if( ancestorGenerations > 0 ) {
-				if( parentNode.getPersonNodes().size() == 1 ) { // Single parent
+				if( parentSingle ) {
 					findUncles(father, firstParentGroup, Side.RIGHT);
 				} else {
 					Group secondParentGroup = createGroup(-1, parentMini, Branch.MATER);
@@ -251,17 +254,23 @@ public class Graph {
 			// Recall this method
 			if( generUp < ancestorGenerations ) {
 				List<PersonNode> parents = parentNode.getPersonNodes();
-				Group secondParentGroup = createGroup(-parentGen, parentMini, Branch.MATER);
-				secondParentGroup.addNode(parentNode);
-				for( int i = 0; i < parents.size(); i++ ) {
-					PersonNode parent = parents.get(i);
-					if( i == 0 ) {
-						findAncestorGenus(parent, secondParentGroup, Side.RIGHT);
-						findAncestors(parent, firstParentGroup, parentGen);
-					} else {
-						findAncestorGenus(parent, firstParentGroup, Side.LEFT);
-						findAncestors(parent, secondParentGroup, parentGen);
+				if( parents.size() > 1 ) {
+					Group secondParentGroup = createGroup(-parentGen, parentMini, Branch.MATER);
+					secondParentGroup.addNode(parentNode);
+					for( int i = 0; i < parents.size(); i++ ) {
+						PersonNode parent = parents.get(i);
+						if( i == 0 ) {
+							findAncestorGenus(parent, secondParentGroup, Side.RIGHT);
+							findAncestors(parent, firstParentGroup, parentGen);
+						} else {
+							findAncestorGenus(parent, firstParentGroup, Side.LEFT);
+							findAncestors(parent, secondParentGroup, parentGen);
+						}
 					}
+				} else { // Single parent 	TODO verifica con famiglia antenati SENZA genitori
+					PersonNode parent = parents.get(0);
+					findAncestorGenus(parent, firstParentGroup, Gender.isFemale(parent.person) ? Side.LEFT : Side.RIGHT);
+					findAncestors(parent, firstParentGroup, parentGen);
 				}
 			}
 		}
@@ -446,6 +455,7 @@ public class Graph {
 		PersonNode personNode = new PersonNode(gedcom, person, type);
 		personNode.generation = generation;
 		personNode.origin = parentNode;
+		personNode.match = match;
 		if( type == Card.FULCRUM )
 			fulcrumNode = personNode;
 
