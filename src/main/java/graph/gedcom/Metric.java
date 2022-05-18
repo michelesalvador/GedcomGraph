@@ -22,6 +22,4 @@ public abstract class Metric {
 
 	abstract void setX(float x);
 	abstract void setY(float y);
-
-	abstract void setForce(float power);
 }

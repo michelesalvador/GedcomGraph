@@ -112,24 +112,22 @@ public class Graph {
 		return animator.backLineGroups;
 	}
 
-	// Preparation of the nodes: to be called once
+	// Preparation of the nodes
 	public void initNodes() {
 		animator.initNodes(fulcrumNode, maxAbove, maxBelow);
 	}
 
-	// First displacement of the nodes: to be called once
+	// Final displacement of the nodes
 	public void placeNodes() {
 		animator.placeNodes();
 	}
 
-	/** Generate the next "frame" of the node positions: to be callad multiple times
-	 * @return true if there is still something to move, false if positioning is complete
-	 */
-	public boolean playNodes() {
-		return animator.playNodes();
-	}
+	/* Update only lines position
+	public void updateLines() {
+		animator.updateLines();
+	}*/
 
-	/** Draw the diagram starting from fulcrum.
+	/** Prepare the diagram starting from fulcrum.
 	 * @param fulcrum The person that becomes the diagram center
 	 */
 	public void startFrom(Person fulcrum) {
@@ -188,7 +186,7 @@ public class Graph {
 				} else if( siblingNephewGenerations > 0 ) {
 					Genus siblingGenus = findPersonGenus(sibling, parentNode, 0, Card.REGULAR, fulcrumGroup);
 					for( Node siblingNode : siblingGenus ) {
-						findDescendants(siblingNode, 0, siblingNephewGenerations, Branch.NONE);
+						findDescendants(siblingNode, 0, siblingNephewGenerations, false);
 					}
 				}
 			}
@@ -300,10 +298,10 @@ public class Graph {
 				}
 				for( Node node : genus )
 					if( !node.equals(personNode.familyNode) ) {
-						if( generation < -1 )
-							findDescendants(node, generation, 0, side.getBranch());
+						if( generation < -1 ) // Mini progeny
+							findDescendants(node, generation, 0, false);
 						else
-							findDescendants(node, -1, siblingNephewGenerations + 1, side.getBranch());
+							findDescendants(node, -1, siblingNephewGenerations + 1, side == Side.LEFT ? true : false);
 					}
 			}
 		}
@@ -325,7 +323,7 @@ public class Graph {
 				boolean ancestorFound = false;
 				for( Person uncle : family.getChildren(gedcom) ) {
 					int index = -1; // The uncle will be added at the end of the group
-					if( branch == Branch.NONE ) {
+					if( branch == Branch.NONE ) { // Not particulary paternal or maternal uncles (could be on both sides of ancestor)
 						if( uncle.equals(person) ) {
 							if( generUp == 1 && side == Side.LEFT )
 								break; // All left uncles found, we can exit the for loop
@@ -341,9 +339,9 @@ public class Graph {
 								index = group.list.indexOf(personNode.getFamilyNode()); // Uncle will be put before the ancestor node
 							group.addNode(uncleNode, index);
 							if( generUp == 1 ) // Add the cousins and possibly their descendants
-								findDescendants(uncleNode, -1, uncleCousinGenerations, index > -1 ? Branch.PATER : branch);
+								findDescendants(uncleNode, -1, uncleCousinGenerations, index > -1 ? true : false);
 							else // Mini progeny of great-uncles
-								findDescendants(uncleNode, -generUp, 1, Branch.NONE);
+								findDescendants(uncleNode, -generUp, 1, false);
 
 						}
 					}
@@ -356,7 +354,7 @@ public class Graph {
 	void marriageAndChildren(Person fulcrum, Node parentNode, Group group) {
 		Genus fulcrumGenus = findPersonGenus(fulcrum, parentNode, 0, Card.FULCRUM, group);
 		for( Node node : fulcrumGenus ) {
-			findDescendants(node, 0, descendantGenerations + 1, Branch.NONE); // + 1 because we start from the generation before
+			findDescendants(node, 0, descendantGenerations + 1, false); // + 1 because we start from the generation before
 		}
 	}
 
@@ -364,21 +362,21 @@ public class Graph {
 	 * @param commonNode Node containing the person of whom to find descendants. Can be a PersonNode or a FamilyNode.
 	 * @param startGeneration Number of the generation of the first 'commonNode': -1 for parents, 0 for fulcrum, 1 for children etc.
 	 * @param maxGenerations Limit of the number of generations to search
-	 * @param branch
+	 * @param toTheLeft The new group will be placed to the left of fulcrum group
 	 */
-	private void findDescendants(Node commonNode, int startGeneration, int maxGenerations, Branch branch) {
+	private void findDescendants(Node commonNode, int startGeneration, int maxGenerations, boolean toTheLeft) {
 		Family spouseFamily = commonNode.spouseFamily;
 		if( spouseFamily != null && !spouseFamily.getChildren(gedcom).isEmpty() ) {
 			int generChild = commonNode.generation + 1;
 			boolean childMini = generChild >= maxGenerations + startGeneration;
 			if( !childMini && generChild > maxBelow )
 				maxBelow = generChild;
-			Group childGroup = createGroup(generChild, childMini, branch);
+			Group childGroup = createGroup(generChild, childMini, Branch.NONE, toTheLeft);
 			for( Person child : spouseFamily.getChildren(gedcom) ) {
 				Genus childGenus = findPersonGenus(child, commonNode, generChild, childMini ? Card.PROGENY : Card.REGULAR, childGroup);
 				if( !childMini ) {
 					for( Node childNode : childGenus ) {
-						findDescendants(childNode, startGeneration, maxGenerations, branch);
+						findDescendants(childNode, startGeneration, maxGenerations, false);
 					}
 				}
 			}
@@ -429,11 +427,15 @@ public class Graph {
 		}
 	}
 
-	// Create the container for siblings and their spouses (for multiple marriages also)
+	// Create the container for siblings and their spouses (containing multiple marriages also)
 	Group createGroup(int generation, boolean mini, Branch branch) {
+		return createGroup(generation, mini, branch, false);
+	}
+
+	Group createGroup(int generation, boolean mini, Branch branch, boolean beforeFulcrumGroup) {
 		Group group = new Group(generation, mini, branch);
 		// Add it to groups list
-		if( branch == Branch.PATER && generation == 0 ) { // Group of paternal cousins
+		if( beforeFulcrumGroup ) { // Group of paternal cousins
 			int index = animator.groups.indexOf(fulcrumGroup);
 			animator.groups.add(index, group);
 		} else

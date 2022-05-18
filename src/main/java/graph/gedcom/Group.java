@@ -41,16 +41,12 @@ public class Group extends Metric {
 		boolean found = false;
 		// For ancestors 
 		for( Node node : list ) {
-			if( node.isAncestor && !node.getPersonNodes().isEmpty() ) {
-
-				if( node.getPersonNodes().size() == 1) { // TODO funziona ma è orribile
-					continue;
-				}
-
+			if( node.isAncestor && node.getPersonNodes().size() > 1 ) {
 				origin = node.getPartner(branch == Branch.MATER ? 1 : 0).getOrigin();
 				found = true;
 			}
 		}
+		// All other groups, fulcrum group included
 		if( !found ) {
 			for( Node node : list ) {
 				PersonNode personNode = node.getMainPersonNode();
@@ -76,6 +72,16 @@ public class Group extends Metric {
 		return false;
 	}
 
+	// Nodes of this group have some child (not mini)
+	public boolean hasChildren() {
+		for( Node node : list ) {
+			if( node.youth != null && !node.youth.mini ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	// If this group is a multimarriage only (without any sibling) returns the main person node, otherwise returns null.
 	private Node getStallion() {
 		Node nearNode = null;
@@ -83,9 +89,35 @@ public class Group extends Metric {
 			if( !node.isMultiMarriage() )
 				return null;
 			else if( node.match == Match.NEAR )
+				// TODO Il NEAR che qui permette di identificare lo stallion, in un FamilyNode ancestor dovrebbe stare in ogni singola Person,
+				// Invece è associato al FamilyNode, rendendolo di fatto inutile.
 				nearNode = node;
 		}
 		return nearNode;
+	}
+
+	// Place origin and uncles
+	public void placeAncestors() {
+		if( origin != null ) {
+			placeOriginX();
+			Union union = origin.union;
+			if( union != null ) {
+				// Place paternal uncles
+				float posX = origin.x;
+				for( int i = union.list.indexOf(origin) - 1; i >= 0; i-- ) {
+					Node node = union.list.get(i);
+					posX -= node.width + HORIZONTAL_SPACE;
+					node.setX(posX);
+				}
+				// Place maternal uncles
+				posX = origin.x + origin.width + HORIZONTAL_SPACE;
+				for( int i = union.list.indexOf(origin) + 1; i < union.list.size(); i++ ) {
+					Node node = union.list.get(i);
+					node.setX(posX);
+					posX += node.width + HORIZONTAL_SPACE;
+				}
+			}
+		}
 	}
 
 	// Place horizontally the origin centered to this group nodes
@@ -104,14 +136,27 @@ public class Group extends Metric {
 		origin.setY(y - (list.size() > 1 && stallion == null ? LITTLE_GROUP_DISTANCE : ANCESTRY_DISTANCE) - origin.height);
 	}
 
-	float leftX() {
-		//return x + getLeftWidth(null); // OK
-		return x;
-	}
-
-	float rightX() {
-		//return x + getLeftWidth(null) + getCentralWidth(null); // OK
-		return x + getWidth();
+	// How much this descendant group can move to the left (negative) or to the right (positive) respect origin center
+	float spaceAround() {
+		float distance = origin.centerX() - centerX();
+		if( distance < 0 ) { // Want move to the left
+			//p("\t", generation, origin.centerX(), centerX(), distance, this, origin);
+			Node prev = list.get(0).prev;
+			if( prev != null ) {
+				float left = Math.min(0, prev.x + prev.width + UNION_DISTANCE - x); // Can't be positive
+				return Math.max(left, distance);
+			} else
+				return distance;
+		} else if( distance > 0 ) { // Want move to the right
+			//p("\t", generation,origin.centerX(), centerX(), distance, this, origin);
+			Node next = list.get(list.size() - 1).next;
+			if( next != null ) {
+				float right = Math.max(0, next.x - x - getWidth() - UNION_DISTANCE); // Can't be negative
+				return Math.min(right, distance);
+			} else
+				return distance;
+		}
+		return 0;
 	}
 
 	// Excluded acquired spouses at right
@@ -145,19 +190,8 @@ public class Group extends Metric {
 		this.y = y;
 	}
 
-	@Override
-	void setForce(float push) {
-		for( Node node : list ) {
-			node.setForce(push);
-		}
-	}
-
 	void updateX() {
 		x = list.get(0).x;
-	}
-
-	void shift(float run) {
-		setX(x + run);
 	}
 
 	// Total width of the group considering all nodes

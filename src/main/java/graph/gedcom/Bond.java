@@ -32,9 +32,6 @@ public class Bond extends Metric {
 		this.y = y;
 	}
 
-	@Override
-	void setForce(float f) {}
-
 	// Simple solution to retrieve the marriage year.
 	// Family Gem uses another much more complex.
 	public String marriageYear() {

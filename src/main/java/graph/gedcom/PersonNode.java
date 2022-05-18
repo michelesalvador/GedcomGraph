@@ -13,7 +13,7 @@ public class PersonNode extends Node {
 	private Gedcom gedcom;
 	public Person person;
 	public Node origin; // The FamilyNode or PersonNode which this person was born from
-	FamilyNode familyNode; // The FamilyNode in which this person is spouse
+	FamilyNode familyNode; // The FamilyNode in which this person is spouse. Null for singles.
 	Card type; // Size and function
 	public boolean acquired; // Is this person acquired spouse (not blood relative)?
 	public boolean dead;
@@ -44,13 +44,6 @@ public class PersonNode extends Node {
 	}
 
 	@Override
-	Group getGroup() {
-		if( familyNode != null )
-			return familyNode.group;
-		return group;
-	}
-
-	@Override
 	Node getOrigin() {
 		return origin;
 	}
@@ -61,6 +54,11 @@ public class PersonNode extends Node {
 		if( origin != null )
 			origins.add(origin);
 		return origins;
+	}
+
+	@Override
+	boolean hasOrigins() {
+		return origin != null;
 	}
 
 	@Override
@@ -160,6 +158,7 @@ public class PersonNode extends Node {
 
 	@Override
 	void setX(float x) {
+		force += x - this.x;
 		this.x = x;
 	}
 

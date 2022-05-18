@@ -46,6 +46,17 @@ public class UnionRow extends ArrayList<Union> {
 		}
 	}
 
+	public void placeYouths() {
+		for( Union union : this ) {
+			for( Node node : union.list ) {
+				Group youth = node.youth;
+				if( youth != null && !youth.mini ) { // Existing regular children only
+					node.placeYouthX();
+				}
+			}
+		}
+	}
+
 	@Override
 	public String toString() {
 		String txt = generation + ": <";

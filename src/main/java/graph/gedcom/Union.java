@@ -13,9 +13,7 @@ import static graph.gedcom.Util.*;
 public class Union extends Metric {
 
 	List<Node> list; // List of PersonNodes and FamilyNodes that move horizontally together
-	Node ancestor; // The ancestor(s) of fulcrum, can be null
-	float prevOverlap = -1;
-	float nextOverlap = -1;
+	Node ancestor; // The ancestor node of fulcrum, or fulcrum itself FamilyNode/PersonNode. Null for cousins and descendants
 
 	Union() {
 		list = new ArrayList<>();
@@ -28,30 +26,69 @@ public class Union extends Metric {
 		return Collections.emptyList();
 	}
 
-	// For descendants where union = group
-	Node getOrigin() {
-		for(Node node : list) {
-			if( node.getOrigin() != null )
-				return node.getOrigin();
-		}
-		return null;
-	}
-
-	public int getGeneration() {
-		return list.get(0).generation;
-	}
-
 	void updateX() {
 		x = list.get(0).x;
+	}
+
+	// Distribute horizontaly the nodes in between their siblings and position the extreme nodes
+	// Valid for descendants only (from -1 generation included down)
+	void distributeSiblings() {
+		if( hasChildren() ) { // This union has some child
+			for( int i = 0; i < list.size(); i++ ) {
+				Node node = list.get(i);
+				if( node.youth == null ) { // The node has no children
+					// Put the node in the middle of prev and next
+					if( node.prev != null && node.prev.union.equals(this) && node.next != null
+							&& node.next.union.equals(this) ) {
+						float space = node.next.x - node.prev.x - node.prev.width - node.width;
+						node.setX(node.prev.x + node.prev.width + space / 2);
+					} // First node of union
+					else if( i == 0 && node.next != null ) {
+						node.setX(node.next.x - node.width - HORIZONTAL_SPACE);
+					} // Last node of union
+					else if( i == list.size() - 1 && node.prev != null ) {
+						node.setX(node.prev.x + node.prev.width + HORIZONTAL_SPACE);
+					}
+				}
+			}
+		}
+	}
+
+	boolean hasChildren() {
+		for( Node node : list ) {
+			if( node.youth != null && !node.youth.mini )
+				return true;
+		}
+		return false;
+	}
+
+	// Find the left or right space to move respect youth center
+	float spaceAround() {
+		ancestor.youth.updateX();
+		float distance = ancestor.youth.centerX() - centerX();
+		if( distance < 0 ) { // Could move to the left
+			Node prev = list.get(0).prev;
+			if( prev != null ) {
+				float left = prev.x + prev.width + UNION_DISTANCE - x;
+				return Math.max(left, distance);
+			} else
+				return distance;
+		} else if( distance > 0 ) { // Could move to the right
+			Node next = list.get(list.size() - 1).next;
+			if( next != null ) {
+				float right = next.x - x - getWidth() - UNION_DISTANCE;
+				return Math.min(right, distance);
+			} else
+				return distance;
+		}
+		return 0;
 	}
 
 	// Excluded spuses at extremes
 	@Override
 	public float centerRelX() {
-		Group group = list.get(0).getGroup();
-		if( group.stallion != null )
-			return group.stallion.getLeftWidth(null);
-		return group.getLeftWidth() + group.getCentralWidth() / 2;
+		// Is always ancestor or fulcrum union
+		return ancestor.centerX() - x;
 	}
 
 	@Override
@@ -74,45 +111,6 @@ public class Union extends Metric {
 			node.setY(y);
 		}
 		this.y = y;
-	}
-
-	@Override
-	void setForce(float push) {
-		setForce(push, 0);
-	}
-
-	// ancestorsDescendantsToo 0: none, 1: ancestors too, 2: descendants too
-	void setForce(float push, int ancestorsDescendantsToo) {
-		for( Node node : list ) {
-			node.setForce(push);
-			// Update the descendants too
-			if( ancestorsDescendantsToo == 2 && node.generation >= 0 ) {
-				forceChildren(node, push);
-			}
-		}
-		// And the ancestors
-		if( ancestorsDescendantsToo == 1 && getGeneration() < 0 ) {
-			forceOrigin(this, push);
-		}
-	}
-	
-	// Recoursively pass the force to uncestors
-	void forceOrigin(Union union, float push) {
-		for( Node origin : union.getOrigins() ) {
-			if( !origin.mini && origin.union != null ) {
-				origin.union.setForce(push, 1);
-			}
-		}
-	}
-
-	// Recoursively pass the force to children
-	void forceChildren(Node node, float push) {
-		if( node.youth != null && !node.youth.mini ) {
-			for( Node child : node.youth.list ) {
-				child.setForce(push);
-				forceChildren(child, push);
-			}
-		}
 	}
 
 	// Total width of the union considering all nodes

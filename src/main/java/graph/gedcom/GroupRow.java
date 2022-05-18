@@ -38,6 +38,13 @@ class GroupRow extends ArrayList<Group> {
 		}
 	}
 
+	// Place nodes of this ancestor row
+	public void placeAncestors() {
+		for( Group group : this ) {
+			group.placeAncestors();
+		}
+	}
+
 	@Override
 	public String toString() {
 		String txt = generation + ": <";

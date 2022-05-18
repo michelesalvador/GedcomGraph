@@ -26,11 +26,6 @@ public class FamilyNode extends Node {
 	}
 
 	@Override
-	Group getGroup() {
-		return group;
-	}
-
-	@Override
 	Node getOrigin() {
 		PersonNode mainPerson = getMainPersonNode();
 		if( mainPerson != null )
@@ -46,6 +41,15 @@ public class FamilyNode extends Node {
 				origins.add(partner.origin);
 		}
 		return origins;
+	}
+
+	@Override
+	boolean hasOrigins() {
+		for( PersonNode partner : partners ) {
+			if( partner.origin != null && !partner.origin.mini )
+				return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -136,6 +140,7 @@ public class FamilyNode extends Node {
 	// Place partners and bond
 	@Override
 	void setX(float x) {
+		force += x - this.x;
 		this.x = x;
 		if( partners.isEmpty() ) { // Mini ancestry without partners
 			bond.setX(x);

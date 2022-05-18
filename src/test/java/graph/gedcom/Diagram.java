@@ -62,27 +62,22 @@ public class Diagram {
 			graphicNodes.add(new GraphicBond(bond));
 		}
 
-		graph.placeNodes(); // First nodes displacement
+		graph.placeNodes(); // Let the graph calculate final position of nodes and lines
 
-		// Animate the nodes!
-		boolean play = true;
-		while( play ) {
-			play = graph.playNodes(); // Let the graph calculate positions of Nodes and Lines
-			// Loop into the nodes to update their position on the cartesian plane of canvas
-			for( GraphicMetric graphicNode : graphicNodes ) {
-				p(graphicNode, "\t", graphicNode.metric.x, "/", graphicNode.metric.y);
-			}
-			// Display the lines
-			for( Set<Line> linesGroup : graph.getLines() ) {
-				for( Line line : linesGroup ) {
-					// parent
-					float x1 = line.x1;
-					float y1 = line.y1;
-					// child
-					float x2 = line.x2;
-					float y2 = line.y2;
-					// ...
-				}
+		// Loop into the nodes to update their position on the cartesian plane of canvas
+		for( GraphicMetric graphicNode : graphicNodes ) {
+			p(graphicNode, "\t", graphicNode.metric.x, "/", graphicNode.metric.y);
+		}
+		// And display the lines
+		for( Set<Line> linesGroup : graph.getLines() ) {
+			for( Line line : linesGroup ) {
+				// parent
+				float x1 = line.x1;
+				float y1 = line.y1;
+				// child
+				float x2 = line.x2;
+				float y2 = line.y2;
+				// ...
 			}
 		}
 	}
