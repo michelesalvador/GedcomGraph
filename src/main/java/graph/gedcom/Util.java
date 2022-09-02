@@ -83,7 +83,7 @@ public class Util {
 
 	public enum Gender {
 
-		NONE, // No SEX tag
+		NONE, // No SEX tag or null value
 		MALE, // 'SEX M'
 		FEMALE, // 'SEX F'
 		UNDEFINED, // 'SEX U'
@@ -92,16 +92,16 @@ public class Util {
 		// Find the gender of a Person
 		public static Gender getGender(Person person) {
 			for( EventFact fact : person.getEventsFacts() ) {
-				if( fact.getTag() != null && fact.getTag().equals("SEX") ) {
-					switch( fact.getValue() ) {
+				if( fact.getTag() != null && fact.getTag().equals("SEX") && fact.getValue() != null ) {
+					switch( fact.getValue() ) { // Can not be null
 						case "M": return MALE;
 						case "F": return FEMALE;
 						case "U": return UNDEFINED;
-						default: return OTHER;  // NULL or other value
+						default: return OTHER;  // Other value
 					}
 				}
 			}
-			return NONE; // There is no 'SEX' tag
+			return NONE; // There is no 'SEX' tag or the value is null
 		}
 
 		public static boolean isMale(Person person) {

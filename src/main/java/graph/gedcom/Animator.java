@@ -17,15 +17,16 @@ public class Animator {
 	List<PersonNode> personNodes;
 	List<Bond> bonds;
 	List<Line> lines; // All the continuous lines ordered from left to right
-	List<LinesRow> lineRows; // All the continuous lines divided in groups in a 2D array
+	List<LineRow> lineRows; // All the continuous lines divided in groups in a 2D array
 	List<Set<Line>> lineGroups; // All the continuous lines distributed in groups by proximity
 	List<Line> backLines; // All the back (dashed) lines ordered from left to right
-	List<LinesRow> backLineRows; // All the back (dashed) lines divided in groups in a 2D array
+	List<LineRow> backLineRows; // All the back (dashed) lines divided in groups in a 2D array
 	List<Set<Line>> backLineGroups; // All the back (dashed) lines distributed in groups by proximity
 	List<Group> groups; // Array of groups of PersonNodes and FamilyNodes (not mini)
 	List<GroupRow> groupRows;
 	List<UnionRow> unionRows; // Array of rows of Unions
-	int maxBitmapWidth, maxBitmapHeight;
+	float maxBitmapSize;
+	float biggestPathSize;
 
 	Animator() {
 		nodes = new ArrayList<>();
@@ -57,6 +58,7 @@ public class Animator {
 		this.maxAbove = maxAbove;
 		width = 0;
 		height = 0;
+		biggestPathSize = 0;
 
 		// Array with max height of each row of nodes
 		int totalRows = maxAbove + 1 + maxBelow;
@@ -339,9 +341,9 @@ public class Animator {
 			unionRow.resolveOverlap();
 		}
 		// Align progenitors (those without ancestors, or with mini ancestors)
-		for( int r = maxAbove - 1; r >= 0; r-- ) { // Start from fulcrum generation up
+		for( int r = maxAbove - 1; r >= 0; r-- ) { // Starting from generation -1 and going up
 			for( Union union : unionRows.get(r) ) {
-				if( !union.ancestor.hasOrigins() ) {
+				if( !union.ancestor.hasOrigins() ) { // Forse necessario && union.ancestor.youth != null (anche se non vedo come youth possa essere null)
 					union.updateX(); // Necessary
 					union.setX(union.x + union.spaceAround());
 				}
@@ -391,7 +393,12 @@ public class Animator {
 		}
 	}
 
-	private void distributeLines(List<Line> lines, List<LinesRow> lineRows, List<Set<Line>> lineGroups) {
+	private void distributeLines(List<Line> lines, List<LineRow> lineRows, List<Set<Line>> lineGroups) {
+
+		// Max bitmap size is necessary
+		if( maxBitmapSize == 0 )
+			return;
+
 		// Update lines position
 		for( Line line : lines )
 			line.update();
@@ -405,34 +412,32 @@ public class Animator {
 		});
 
 		// Clear lineRows
-		for( LinesRow row : lineRows ) {
+		for( LineRow row : lineRows ) {
 			row.reset();
 		}
+
 		// Distribute lines inside 'lineRows'
 		for( Line line : lines ) {
-			float lineWidth = Math.abs(line.x1 - line.x2);
-			if( lineWidth <= maxBitmapWidth ) {
-				int rowNum = (int)(line.y2 / maxBitmapHeight);
-				while( rowNum >= lineRows.size() ) {
-					lineRows.add(new LinesRow());
-				}
-				LinesRow row = lineRows.get(rowNum);
-				if( row.restartX < 0)
-					row.restartX = Math.min(line.x1, line.x2);
-				float groupRight = Math.max(line.x1, line.x2) - row.restartX;
-				// Start another group
-				if( groupRight > maxBitmapWidth ) {
-					row.activeGroup++;
-					row.restartX = Math.min(line.x1, line.x2);
-				}
-				if( row.activeGroup >= row.size() )
-					row.add(new HashSet<Line>());
-				row.get(row.activeGroup).add(line);
+			int rowNum = (int)(line.y2 / maxBitmapSize);
+			while( rowNum >= lineRows.size() ) {
+				lineRows.add(new LineRow());
 			}
+			LineRow row = lineRows.get(rowNum);
+			float lineLeft = Math.min(line.x1, line.x2);
+			if( row.size() == 0 || lineLeft > row.restartX + maxBitmapSize ) {
+				row.restartX = lineLeft;
+				row.add(new HashSet<Line>());
+			}
+			row.get(row.size() - 1).add(line);
+			// Store the wider path size
+			float pathWidth = Math.max(line.x1, line.x2) - row.restartX;
+			if( pathWidth > biggestPathSize )
+				biggestPathSize = pathWidth;
 		}
+
 		// Populate linesGroups with existing groups of lines
 		lineGroups.clear();
-		for( LinesRow row : lineRows ) {
+		for( LineRow row : lineRows ) {
 			for( Set<Line> group : row ) {
 				if( group.size() > 0 )
 					lineGroups.add(group);
@@ -441,14 +446,11 @@ public class Animator {
 	}
 
 	// One row of the 2D array 'lineRows'
-	class LinesRow extends ArrayList<Set<Line>> {
-
-		int activeGroup; // Index of the used group
-		float restartX = -1; // (re)starting point of every group of lines inside this row
+	class LineRow extends ArrayList<Set<Line>> {
+		float restartX; // (re)starting point of every group of lines inside this row
 
 		void reset() {
-			activeGroup = 0;
-			restartX = -1;
+			restartX = 0;
 			for( Set<Line> group : this )
 				group.clear();
 		}

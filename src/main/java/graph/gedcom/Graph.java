@@ -89,20 +89,20 @@ public class Graph {
 		return animator.bonds;
 	}
 
-	public boolean needMaxBitmap() {
-		return animator.maxBitmapWidth == 0 && animator.maxBitmapHeight == 0;
+	public boolean needMaxBitmapSize() {
+		return animator.maxBitmapSize == 0;
 	}
 
-	public void setMaxBitmap(int width, int height) {
-		animator.maxBitmapWidth = width;
-		animator.maxBitmapHeight = height;
+	public void setMaxBitmapSize(float size) { // Size in dip
+		animator.maxBitmapSize = size;
 	}
 
-	public int getMaxBitmapWidth(){
-		return animator.maxBitmapWidth;
+	public float getMaxBitmapSize() { // Larger path width in dip
+		return animator.maxBitmapSize;
 	}
-	public int getMaxBitmapHeight(){
-		return animator.maxBitmapHeight;
+
+	public float getBiggestPathSize() {
+		return animator.biggestPathSize;
 	}
 
 	public List<Set<Line>> getLines() {
@@ -149,13 +149,15 @@ public class Graph {
 			// Creation of parent nodes of fulcrum
 			if( whichFamily >= fulcrumParents.size() )
 				whichFamily = fulcrumParents.size() - 1; // To prevent IndexOutOfBoundsException
+			else if( whichFamily < 0 )
+				whichFamily = 0; // To prevent ArrayIndexOutOfBoundsException
 			Family parentFamily = fulcrumParents.get(whichFamily);
 			boolean parentMini = ancestorGenerations == 0;
 			Group firstParentGroup = createGroup(-1, parentMini, null);
 			Node parentNode = createNodeFromFamily(parentFamily, -1, parentMini ? Card.ANCESTRY : Card.REGULAR);
 			parentNode.isAncestor = true;
 			boolean parentSingle = parentNode.getPersonNodes().size() == 1
-					&& parentNode.getPartner(0).person.getSpouseFamilyRefs().size() <= 1; // Single parent
+					&& parentNode.getPartner(0).person.getSpouseFamilyRefs().size() <= 1; // Single parent with no other marriages
 			parentNode.match = (!parentMini && !parentSingle) ? Match.NEAR : Match.SOLE;
 			Branch parentBranch = parentNode.getPersonNodes().size() > 1 ? Branch.PATER : Branch.NONE;
 			firstParentGroup.branch = parentBranch;
@@ -163,19 +165,24 @@ public class Graph {
 			if( !parentMini )
 				maxAbove = 1;
 
-			PersonNode father = parentNode.getPartner(0);
-			PersonNode mother = parentNode.getPartner(1);
+			PersonNode first = parentNode.getPartner(0);
+			PersonNode second = parentNode.getPartner(1);
+			boolean femaleAlone = false;
 			// Find ancestors on the left
 			if (ancestorGenerations > 0 ) {
-				if( father != null) {
+				if( first != null) {
 					// Paternal grand-parents
-					findAncestors(father, firstParentGroup, 1);
+					findAncestors(first, firstParentGroup, 1);
 					// Paternal uncles
-					findUncles(father, firstParentGroup, parentNode.getPersonNodes().size() == 1 ? Side.LEFT : Side.NONE);
+					findUncles(first, firstParentGroup, parentNode.getPersonNodes().size() == 1 ? Side.LEFT : Side.NONE);
 				}
-				// Other marriages of the mother
-				if( mother != null ) {
-					findAncestorGenus(mother, firstParentGroup, Side.LEFT);
+				// Other partners of the second parent
+				if( second != null ) {
+					findAncestorGenus(second, firstParentGroup, Side.LEFT);
+				} // Other partners of a female alone parent
+				else if( first != null && Gender.isFemale(first.person) ) {
+					findAncestorGenus(first, firstParentGroup, Side.LEFT);
+					femaleAlone = true;
 				}
 			}
 
@@ -194,19 +201,19 @@ public class Graph {
 			// Find ancestors on the right
 			if( ancestorGenerations > 0 ) {
 				if( parentSingle ) {
-					findUncles(father, firstParentGroup, Side.RIGHT);
+					findUncles(first, firstParentGroup, Side.RIGHT);
 				} else {
 					Group secondParentGroup = createGroup(-1, parentMini, Branch.MATER);
 					secondParentGroup.addNode(parentNode);
-					// Other marriages of the father
-					if( father != null ) {
-						findAncestorGenus(father, secondParentGroup, Side.RIGHT);
+					// Other marriages of the first not-female-alone partner
+					if( first != null && !femaleAlone) {
+						findAncestorGenus(first, secondParentGroup, Side.RIGHT);
 					}
-					if( mother != null ) {
+					if( second != null ) {
 						// Uncles and grand-parents
-						findAncestors(mother, secondParentGroup, 1);
+						findAncestors(second, secondParentGroup, 1);
 						// Uncles
-						findUncles(mother, secondParentGroup, Side.NONE);
+						findUncles(second, secondParentGroup, Side.NONE);
 					}
 				}
 			}

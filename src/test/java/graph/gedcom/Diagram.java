@@ -51,8 +51,8 @@ public class Diagram {
 
 		// Get the dimensions of each graphic node
 		for( GraphicMetric graphicNode : graphicNodes ) {
-			graphicNode.metric.width = graphicNode.toString().length(); // graphicNode.getWidth() or something
-			graphicNode.metric.height = graphicNode.hashCode(); // graphicNode.getHeight()
+			graphicNode.metric.width = 100; // graphicNode.getWidth() or something
+			graphicNode.metric.height = 100; // graphicNode.getHeight()
 		}
 
 		graph.initNodes(); // Prepare nodes
@@ -61,6 +61,8 @@ public class Diagram {
 		for( Bond bond : graph.getBonds() ) {
 			graphicNodes.add(new GraphicBond(bond));
 		}
+
+		graph.setMaxBitmapSize(1000); // So the lines can be distributed in groups
 
 		graph.placeNodes(); // Let the graph calculate final position of nodes and lines
 
