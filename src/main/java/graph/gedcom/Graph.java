@@ -156,9 +156,6 @@ public class Graph {
 			Group firstParentGroup = createGroup(-1, parentMini, null);
 			Node parentNode = createNodeFromFamily(parentFamily, -1, parentMini ? Card.ANCESTRY : Card.REGULAR);
 			parentNode.isAncestor = true;
-			boolean parentSingle = parentNode.getPersonNodes().size() == 1
-					&& parentNode.getPartner(0).person.getSpouseFamilyRefs().size() <= 1; // Single parent with no other marriages
-			parentNode.match = (!parentMini && !parentSingle) ? Match.NEAR : Match.SOLE;
 			Branch parentBranch = parentNode.getPersonNodes().size() > 1 ? Branch.PATER : Branch.NONE;
 			firstParentGroup.branch = parentBranch;
 			firstParentGroup.addNode(parentNode);
@@ -200,7 +197,8 @@ public class Graph {
 
 			// Find ancestors on the right
 			if( ancestorGenerations > 0 ) {
-				if( parentSingle ) {
+				// Single parent with no other marriages
+				if( parentNode.getPersonNodes().size() == 1	&& parentNode.getPartner(0).person.getSpouseFamilyRefs().size() <= 1 ) {
 					findUncles(first, firstParentGroup, Side.RIGHT);
 				} else {
 					Group secondParentGroup = createGroup(-1, parentMini, Branch.MATER);
@@ -241,7 +239,6 @@ public class Graph {
 			Group firstParentGroup = createGroup(-parentGen, parentMini, null);
 			FamilyNode parentNode = createNodeFromFamily(family, -parentGen, parentMini ? Card.ANCESTRY : Card.REGULAR);
 			parentNode.isAncestor = true;
-			parentNode.match = Match.SOLE;
 
 			Branch parentBranch = parentNode.getPersonNodes().size() > 1 ? Branch.PATER : Branch.NONE;
 			firstParentGroup.branch = parentBranch;
@@ -288,7 +285,6 @@ public class Graph {
 		if( personNode.type == Card.REGULAR ) {
 			List<Family> families = personNode.person.getSpouseFamilies(gedcom);
 			if( families.size() > 1 ) {
-				personNode.familyNode.match = Match.NEAR;
 				families.remove(personNode.spouseFamily);
 				int generation = personNode.generation;
 				for( int i = 0; i < families.size(); i++ ) {
@@ -405,11 +401,11 @@ public class Graph {
 				Match match = Match.get(families.size(), side, i);
 				Node partnerNode;
 				switch( match ) {
-					case SOLE:
-					case NEAR: // First or last marriage only
+					case SOLE: // Lonley marriage
+					case NEAR: // First marriage
 						partnerNode = createNodeFromPerson(person, family, parentNode, generation, type, match);
 						break;
-					default:
+					default: // Middle or last marriage
 						partnerNode = createNextFamilyNode(family, person, generation, side, match);
 				}
 				if( group != null ) group.addNode(partnerNode);
@@ -464,7 +460,7 @@ public class Graph {
 		PersonNode personNode = new PersonNode(gedcom, person, type);
 		personNode.generation = generation;
 		personNode.origin = parentNode;
-		personNode.match = match;
+		personNode.matches.add(match);
 		if( type == Card.FULCRUM )
 			fulcrumNode = personNode;
 
@@ -475,7 +471,7 @@ public class Graph {
 			if( spouses.size() > 1 && withSpouses ) { // Many spouses
 				familyNode = new FamilyNode(spouseFamily, false, Side.NONE);
 				familyNode.generation = generation;
-				familyNode.match = match;
+				familyNode.matches.add(match);
 				for( Person spouse : spouses ) {
 					if( spouse.equals(person) && !familyNode.partners.contains(personNode) ) {
 						familyNode.addPartner(personNode);
@@ -500,7 +496,7 @@ public class Graph {
 		}
 	}
 	
-	/** Create a node starting from a family: used to find direct ancestors and acquired mini ancestry.
+	/** Create a FamilyNode starting from a family: used to find direct ancestors and acquired mini ancestry.
 	 * @param spouseFamily The spouse family of which create the FamilyNode
 	 * @param generation Number of the generation, negative for ancestors
 	 * @param type Card REGULAR or ANCESTRY
@@ -513,6 +509,8 @@ public class Graph {
 		for( Person spouse : spouses ) {
 			PersonNode personNode = new PersonNode(gedcom, spouse, type);
 			personNode.generation = generation;
+			if( type == Card.REGULAR ) // Mini ancestry excluded
+				newNode.matches.add(spouse.getSpouseFamilyRefs().size() > 1 ? Match.NEAR : Match.SOLE);
 			newNode.addPartner(personNode);
 		}
 		newNode.createBond();
@@ -526,7 +524,7 @@ public class Graph {
 	private FamilyNode createNextFamilyNode(Family spouseFamily, Person excluded, int generation, Side side, Match match) {
 		FamilyNode familyNode = new FamilyNode(spouseFamily, false, side);
 		familyNode.generation = generation;
-		familyNode.match = match;
+		familyNode.matches.add(match);
 		if( withSpouses ) {
 			for( Person partner : getSpouses(spouseFamily) ) {
 				if( !partner.equals(excluded) ) {

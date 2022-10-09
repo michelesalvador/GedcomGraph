@@ -2,14 +2,14 @@
 
 package graph.gedcom;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import org.folg.gedcom.model.Family;
+import graph.gedcom.Util.Match;
 import static graph.gedcom.Util.*;
 
 public abstract class Node extends Metric {
 
-	// Contents
 	public Family spouseFamily; // The person in this node is spouse of this family
 	Group group; // List of siblings to which this node belongs
 	              // Warning: an ancestor node can belong at the same time to 2 groups, making this 'group' useless
@@ -19,8 +19,13 @@ public abstract class Node extends Metric {
 	boolean isAncestor;
 	Union union; // The union this node belongs to (expecially for ancestors)
 	Node prev, next; // Previous and next node on the same row (same generation)
-	Match match; // Number of the relationship: SOLE, NEAR the central one, MIDDLE, or LAST at extreme left (with husband) or right (with wife)
+	List<Match> matches; // List of the relationship positions.
+	                     // When there are 2 ancestors, match 0 is for husband (right branch MATER) and match 1 is for wife (left branch PATER).
 	float force;
+
+	Node() {
+		matches = new ArrayList<>();
+	}
 
 	// Calculate the initial width of first node (complementar to getMainWidth())
 	abstract float getLeftWidth(Branch branch);
@@ -44,7 +49,7 @@ public abstract class Node extends Metric {
 				left = left.prev;
 			}
 		} else { // Place normal youth
-			float posX = centerX() - youth.getLeftWidth() - youth.getBasicCentralWidth() / 2;
+			float posX = centerX() - youth.getBasicLeftWidth() - youth.getBasicCentralWidth() / 2;
 			for( Node child : youth.list ) {
 				child.setX(posX);
 				posX += child.width + HORIZONTAL_SPACE;
@@ -121,8 +126,15 @@ public abstract class Node extends Metric {
 	// Strictly returns the requested partner or null
 	abstract PersonNode getPartner(int id);
 
+	// Relationship match of this node
+	Match getMatch() {
+		return getMatch(null);
+	}
+	abstract Match getMatch(Branch branch);
+
 	// This node is one of the three match: NEAR, MIDDLE or FAR
-	boolean isMultiMarriage() {
+	boolean isMultiMarriage(Branch branch) {
+		Match match = getMatch(branch);
 		return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
 	}
 

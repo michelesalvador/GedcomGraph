@@ -4,7 +4,7 @@ package graph.gedcom;
 
 import graph.gedcom.Util.Match;
 import graph.gedcom.Util.Side;
-import static graph.gedcom.Util.*;
+//import static graph.gedcom.Util.*;
 
 public class BackLine extends Line {
 	
@@ -17,7 +17,7 @@ public class BackLine extends Line {
 	public BackLine(FamilyNode familyNode) {
 		bond = familyNode.bond;
 		side = familyNode.side;
-		match = familyNode.match;
+		match = familyNode.getMatch();
 		noPartners = familyNode.partners.isEmpty();
 		node = familyNode;
 	}

@@ -12,7 +12,7 @@ public class Genus extends ArrayList<Node> {
 		String txt = "[";
 		for( Node node : this ) {
 			txt += node;
-			txt += " " + node.match;
+			//txt += " " + node.getMatch();
 			txt += " - ";
 		}
 		txt = txt.replaceAll(" - $", "]");

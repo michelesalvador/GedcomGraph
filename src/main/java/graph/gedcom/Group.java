@@ -65,7 +65,7 @@ public class Group extends Metric {
 	// Check if origin is mini or without partners
 	boolean isOriginMiniOrEmpty() {
 		if( origin != null ) {
-			if( origin.isMultiMarriage() )
+			if( origin.isMultiMarriage(branch) )
 				return false;
 			return origin.mini || origin.getPersonNodes().isEmpty();
 		}
@@ -82,15 +82,13 @@ public class Group extends Metric {
 		return false;
 	}
 
-	// If this group is a multimarriage only (without any sibling) returns the main person node, otherwise returns null.
+	// If this group is a multimarriage only (without any sibling) returns the NEAR person node, otherwise returns null.
 	private Node getStallion() {
 		Node nearNode = null;
 		for( Node node : list ) {
-			if( !node.isMultiMarriage() )
+			if( !node.isMultiMarriage(branch) )
 				return null;
-			else if( node.match == Match.NEAR )
-				// TODO Il NEAR che qui permette di identificare lo stallion, in un FamilyNode ancestor dovrebbe stare in ogni singola Person,
-				// Invece è associato al FamilyNode, rendendolo di fatto inutile.
+			else if( node.getMatch(branch) == Match.NEAR )
 				nearNode = node;
 		}
 		return nearNode;
@@ -125,7 +123,7 @@ public class Group extends Metric {
 		if( stallion != null )
 			origin.setX(stallion.x + stallion.getLeftWidth(branch) - origin.centerRelX());
 		else {
-			x = list.get(0).x;
+			updateX();
 			origin.setX(x + getLeftWidth() + getCentralWidth() / 2 - origin.centerRelX());
 		}
 	}
@@ -201,36 +199,80 @@ public class Group extends Metric {
 		return width;
 	}
 
-	// Group left width relative to the first not-multimarriage node, including acquired spouses
-	float getLeftWidth() {
-		return list.get(0).getLeftWidth(branch);
+	// Fixed left width relative to the first SOLE or NEAR node of the group, including acquired spouses
+	float getBasicLeftWidth() {
+		float width = 0;
+		for( int i = 0; i < list.size(); i++ ) {
+			Node node = list.get(i);
+			if( node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR ) {
+				width += node.getLeftWidth(branch);
+				break;
+			} else {
+				width += node.width + HORIZONTAL_SPACE;
+			}
+		}
+		return width;
 	}
 
 	// Children's center-to-center fixed width excluding acquired spouses at the extremes
 	float getBasicCentralWidth() {
 		float width = 0;
 		if( list.size() > 1 ) {
+			// Width of the first useful node
+			int start = 0;
 			for( int i = 0; i < list.size(); i++ ) {
-				Position pos;
-				if( i == 0 )
-					pos = Position.FIRST;
-				else if( i == list.size() - 1 )
-					pos = Position.LAST;
-				else
-					pos = Position.MIDDLE;
-				width += list.get(i).getMainWidth(pos) + HORIZONTAL_SPACE;
+				Node node = list.get(i);
+				if( node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR ) {
+					width = node.getMainWidth(Position.FIRST) + HORIZONTAL_SPACE;
+					start = i;
+					break;
+				}
 			}
-			width -= HORIZONTAL_SPACE;
+			// Width of the last useful node starting from the end
+			int end = 0;
+			for( int i = list.size() - 1; i > 0; i-- ) {
+				Node node = list.get(i);
+				if( node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR ) {
+					width += node.getMainWidth(Position.LAST);
+					end = i;
+					break;
+				}
+			}
+			// Width of nodes in the middle
+			for( int i = start + 1; i < end; i++ ) {
+				width += list.get(i).getMainWidth(Position.MIDDLE) + HORIZONTAL_SPACE;
+			}
 		}
 		return width;
 	}
 
-	// Return the no fixed width of the group excluding acquired spouses at the extremes
+	// Not fixed to-center width of the first SOLE or NEAR node from the left
+	private float getLeftWidth() {
+		for( int i = 0; i < list.size(); i++ ) {
+			Node node = list.get(i);
+			if( node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR ) {
+				return node.x - list.get(0).x + node.getLeftWidth(branch);
+			}
+		}
+		return 0;
+	}
+
+	// Return the no fixed central width of the group excluding acquired spouses at extremes
 	float getCentralWidth() {
 		float width = 0;
 		if( list.size() > 1 ) {
-			Node first = list.get(0);
-			Node last = list.get(list.size()-1);
+			Node first = null;
+			for( int i = 0; i < list.size(); i++ ) {
+				first = list.get(i);
+				if( first.getMatch() == Match.SOLE || first.getMatch() == Match.NEAR )
+					break;
+			}
+			Node last = null;
+			for( int i = list.size() - 1; i > 0; i-- ) {
+				last = list.get(i);
+				if( last.getMatch() == Match.SOLE || last.getMatch() == Match.NEAR )
+					break;
+			}
 			width = first.getMainWidth(Position.FIRST)
 					+ last.x - (first.x + first.width)
 					+ last.getMainWidth(Position.LAST);

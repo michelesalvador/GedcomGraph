@@ -23,7 +23,7 @@ public class Util {
 	public static int PROGENY_DISTANCE = 16; // Vertical space between family node and mini progeny
 	public static int PROGENY_PLAY = 12; // Horizontal space between progeny mini cards
 
-	// Card types
+	// Card types different in size and function: fulcrum card, regular size, little ancestry, little progeny.
 	enum Card {
 		FULCRUM, REGULAR, ANCESTRY, PROGENY;
 	}
@@ -33,10 +33,11 @@ public class Util {
 		FIRST, MIDDLE, LAST;
 	}
 
-	/* Used to point out a node as single or multi marriage
+	/* Point out a node as single or multi marriage.
 	 * SOLE: it's a single marriage only
-	 * NEAR: the marriage is close to the person
-	 * FAR: it's at left or right extreme
+	 * NEAR: the marriage is the first of the person
+	 * MIDDLE: zero to N marriages between NEAR and FAR
+	 * FAR: the marriage is at extreme left or right
 	 */
 	enum Match {
 		SOLE, NEAR, MIDDLE, FAR;
@@ -59,6 +60,16 @@ public class Util {
 				return FAR;
 			else
 				return MIDDLE;
+		}
+		@Override
+		public String toString() {
+			switch( this ) {
+				case SOLE: return "SOLE";
+				case NEAR: return "NEAR";
+				case MIDDLE: return "MIDDLE";
+				case FAR: return "FAR";
+				default: return null;
+			}
 		}
 	}
 

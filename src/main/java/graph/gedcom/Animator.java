@@ -123,11 +123,11 @@ public class Animator {
 			// All other lines
 			if( node instanceof FamilyNode ) {
 				FamilyNode familyNode = (FamilyNode)node;
-				if( familyNode.partners.size() > 0 && (familyNode.match == Match.MIDDLE || familyNode.match == Match.FAR) )
+				if( familyNode.partners.size() > 0 && (familyNode.getMatch() == Match.MIDDLE || familyNode.getMatch() == Match.FAR) )
 					lines.add(new NextLine(familyNode));
 				else if( familyNode.partners.size() > 1 && familyNode.bond.marriageDate == null )
 					lines.add(new HorizontalLine(familyNode));
-				if( familyNode.match == Match.MIDDLE || familyNode.match == Match.FAR )
+				if( familyNode.getMatch() == Match.MIDDLE || familyNode.getMatch() == Match.FAR )
 					backLines.add(new BackLine(familyNode));
 				if( familyNode.hasChildren() && familyNode.bond != null )
 					lines.add(new VerticalLine(familyNode));
@@ -204,6 +204,11 @@ public class Animator {
 				}
 			}
 		}
+
+		// Find the central node of each union row
+		for( UnionRow row : unionRows ) {
+			row.findCentralNode();
+		}
 	}
 
 	// At this point marriage bonds are added in the layout
@@ -246,7 +251,7 @@ public class Animator {
 		}
 
 		// Position the descendants starting from generation -1 (if existing) or from fulcrum generation down
-		int start =  maxAbove > 0 ? maxAbove - 1 : 0;
+		int start = Math.max(0, maxAbove - 1);
 		for( int r = start; r < unionRows.size(); r++ ) {
 			UnionRow unionRow = unionRows.get(r);
 			unionRow.resolveOverlap();
@@ -321,9 +326,9 @@ public class Animator {
 				}
 			}
 		}
+		// Place unions below origins to reduce lines overlap
 		for( int r = 0; r < maxAbove - 1; r++ ) { // From top down until generation -2 included
 			UnionRow unionRow = unionRows.get(r);
-			// Move unions below origins to reduce lines overlap
 			for( Union union : unionRow ) {
 				List<Node> origins = union.getOrigins();
 				if( origins.size() > 1 ) {
@@ -343,7 +348,7 @@ public class Animator {
 		// Align progenitors (those without ancestors, or with mini ancestors)
 		for( int r = maxAbove - 1; r >= 0; r-- ) { // Starting from generation -1 and going up
 			for( Union union : unionRows.get(r) ) {
-				if( !union.ancestor.hasOrigins() ) { // Forse necessario && union.ancestor.youth != null (anche se non vedo come youth possa essere null)
+				if( !union.ancestor.hasOrigins() && union.ancestor.youth != null ) { // Strange, but there are crash reports of null youth
 					union.updateX(); // Necessary
 					union.setX(union.x + union.spaceAround());
 				}
@@ -380,14 +385,12 @@ public class Animator {
 			}
 			unionRow.resolveOverlap();
 		}
-		// Horizontally align final groups of this row (having enough space) below origin
-		for( int r = maxAbove; r < groupRows.size(); r++ ) { // Start from fulcrum row
+		// Horizontally align final (without youths) groups of each row (having enough space) below origin
+		for( int r = maxAbove; r < groupRows.size(); r++ ) { // From fulcrum row down
 			for( Group group : groupRows.get(r) ) {
-				if( !group.hasChildren() ) {
-					if( group.origin != null ) {
-						group.updateX();
-						group.setX(group.x + group.spaceAround());
-					}
+				if( !group.hasChildren() && group.origin != null ) {
+					group.updateX();
+					group.setX(group.x + group.spaceAround());
 				}
 			}
 		}

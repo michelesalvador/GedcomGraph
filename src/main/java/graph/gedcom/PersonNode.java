@@ -4,6 +4,8 @@ import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
+import graph.gedcom.Util.Branch;
+import graph.gedcom.Util.Match;
 import java.util.ArrayList;
 import java.util.List;
 import static graph.gedcom.Util.*;
@@ -20,12 +22,9 @@ public class PersonNode extends Node {
 	public int amount; // Number to display in little ancestry or progeny
 	CurveLine line; // Curve line connecting this person with the origin above
 
-	/** Create a node rappresentig a person.
-	 * @param gedcom
-	 * @param person The dude.
-	 * @param type Size and function: 0 fulcrum card, 1 regular size, 2 little ancestry, 3 little progeny
-	 */
+	// Create a node rappresentig a person
 	public PersonNode(Gedcom gedcom, Person person, Card type) {
+		super();
 		this.gedcom = gedcom;
 		this.person = person;
 		this.type = type;
@@ -99,6 +98,11 @@ public class PersonNode extends Node {
 		else if( id == 0 ) // Single person
 			return this;
 		return null;
+	}
+
+	@Override
+	Match getMatch(Branch branch) {
+		return matches.get(0);
 	}
 
 	// Recoursive count of direct ancestors
@@ -187,13 +191,14 @@ public class PersonNode extends Node {
 		else {
 			String txt = "";
 			//txt += " " + Math.floor(force);
-			txt += " " + essence(person);
-			//txt += origin != null ? " " + origin.getChildren().indexOf(this) : " -";
 			//txt += " " + generation;
+			//txt += " " + getMatch();
+			txt += " " + essence(person);
+			//txt += " *" + origin + "*";
 			//txt += " " + person.getId();
 			//txt += " " + (group != null ? group : "null"); // Produce stackoverflow
 			//txt += " " + (group != null ? group.branch : "group=null");
-			return txt;
+			return txt.trim();
 		}
 	}
 }

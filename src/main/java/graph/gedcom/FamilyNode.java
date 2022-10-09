@@ -7,8 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
-import org.folg.gedcom.model.Gedcom;
-import graph.gedcom.Util.Card;
+import graph.gedcom.Util.Match;
 import graph.gedcom.Util.Position;
 import static graph.gedcom.Util.*;
 
@@ -19,6 +18,7 @@ public class FamilyNode extends Node {
 	Side side; // Following or previous marriage: LEFT is a husband, RIGHT is a wife
 
 	public FamilyNode(Family spouseFamily, boolean mini, Side side) {
+		super();
 		this.spouseFamily = spouseFamily;
 		this.mini = mini;
 		this.side = side;
@@ -94,6 +94,15 @@ public class FamilyNode extends Node {
 		return null;
 	}
 
+	@Override
+	Match getMatch(Branch branch) {
+		if( matches.size() > 1 && branch == Branch.PATER )
+			return matches.get(1);
+		else if( matches.size() > 0 )
+			return matches.get(0);
+		return null;
+	}
+
 	// Add a spouse to this family
 	void addPartner(PersonNode partner) {
 		this.partners.add(partner);
@@ -103,7 +112,7 @@ public class FamilyNode extends Node {
 
 	// Crate bond if there are no partners or many partners
 	void createBond() {
-		if( partners.size() == 1 && match != Match.MIDDLE && match != Match.FAR )
+		if( partners.size() == 1 && getMatch() != Match.MIDDLE && getMatch() != Match.FAR )
 			return;
 		bond = new Bond(this);
 		if( !mini && partners.size() > 0 ) {
@@ -215,13 +224,15 @@ public class FamilyNode extends Node {
 
 	@Override
 	public String toString() {
-		String txt = "{";
+		String txt = "";
+		/*for(Match match : matches)
+			txt += match + " ";*/
+		txt += "{";
 		for (PersonNode personNode : partners)
 			txt += personNode + ", ";
 		if( txt.lastIndexOf(", ") > 0 )
 			txt = txt.replaceAll(", $", "");
 		//txt += " " + hashCode();
-		//txt += " " + match;
 		//txt += " " + group.branch;
 		txt += "}";
 		return txt;
