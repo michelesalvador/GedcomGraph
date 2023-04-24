@@ -1,25 +1,27 @@
-/** Basic geometry to position an element in the diagram on x and y, and with width and height.
- * Extended by Node (PersonNode, FamilyNode), Bond, Group, Union.
- */
-
 package graph.gedcom;
 
+/**
+ * Basic geometry to position an element in the diagram on x and y, and with width and height.
+ * Extended by Node (PersonNode, FamilyNode), Bond, Group, Union.
+ */
 public abstract class Metric {
 
-	public float x, y; // Absolute coordinates of the top left corner
-	public float width, height; // Dimensions in dip
+    public float x, y; // Absolute coordinates of the top left corner
+    public float width, height; // Dimensions in dip
 
-	abstract public float centerRelX();
-	abstract public float centerRelY();
+    abstract public float centerRelX();
 
-	public float centerX() {
-		return x + centerRelX();
-	}
+    abstract public float centerRelY();
 
-	public float centerY() {
-		return y + centerRelY();
-	}
+    public float centerX() {
+        return x + centerRelX();
+    }
 
-	abstract void setX(float x);
-	abstract void setY(float y);
+    public float centerY() {
+        return y + centerRelY();
+    }
+
+    abstract void setX(float x);
+
+    abstract void setY(float y);
 }
