@@ -1,5 +1,3 @@
-// Scaffolding for a graphical implementation of GedcomGraph
-
 package graph.gedcom;
 
 import java.io.File;
@@ -12,105 +10,105 @@ import org.folg.gedcom.parser.JsonParser;
 import org.folg.gedcom.parser.ModelParser;
 import static graph.gedcom.Util.p;
 
+/**
+ * Scaffolding for a graphical implementation of GedcomGraph.
+ */
 public class Diagram {
 
-	public static void main(String[] args) throws Exception {
-		new Diagram();
-	}
+    public static void main(String[] args) throws Exception {
+        new Diagram();
+    }
 
-	Diagram() throws Exception {
-		
-		// Parse a Gedcom file
-		File file = new File("src/test/resources/tree.ged");
-		Gedcom gedcom = new ModelParser().parseGedcom(file);
-		gedcom.createIndexes();
+    Diagram() throws Exception {
 
-		// Directly open a Json file
-		/*String content = FileUtils.readFileToString(new File("src/test/resources/tree.json"), "UTF-8");
-		Gedcom gedcom = new JsonParser().fromJson(content);*/
+        // Parses a Gedcom file
+        File file = new File("src/test/resources/tree.ged");
+        Gedcom gedcom = new ModelParser().parseGedcom(file);
+        gedcom.createIndexes();
 
-		// Instantiate a graph
-		Graph graph = new Graph(gedcom);
-		graph.maxAncestors(5)
-			.maxGreatUncles(4)
-			.displaySpouses(true)
-			.maxDescendants(3)
-			.maxSiblingsNephews(2)
-			.maxUnclesCousins(2)
-			.startFrom(gedcom.getPerson("I1"));
+        // Directly opens a Json file
+        // String content = FileUtils.readFileToString(new File("src/test/resources/tree.json"), "UTF-8");
+        // Gedcom gedcom = new JsonParser().fromJson(content);
 
-		p(graph);
+        // Instantiates a graph
+        Graph graph = new Graph();
+        graph.setGedcom(gedcom).maxAncestors(5).maxGreatUncles(4).displaySpouses(true).maxDescendants(3).maxSiblingsNephews(2)
+                .maxUnclesCousins(2).startFrom(gedcom.getPerson("I1"));
 
-		// This list represents the graphic layout
-		List<GraphicMetric> graphicNodes = new ArrayList<>();
+        p(graph);
 
-		// Put all graphic nodes into the layout
-		for( PersonNode personNode : graph.getPersonNodes() ) {
-			graphicNodes.add(new GraphicPerson(personNode));
-		}
+        // This list represents the graphic layout
+        List<GraphicMetric> graphicNodes = new ArrayList<>();
 
-		// Get the dimensions of each graphic node
-		for( GraphicMetric graphicNode : graphicNodes ) {
-			graphicNode.metric.width = 100; // graphicNode.getWidth() or something
-			graphicNode.metric.height = 100; // graphicNode.getHeight()
-		}
+        // Puts all graphic nodes into the layout
+        for (PersonNode personNode : graph.getPersonNodes()) {
+            graphicNodes.add(new GraphicPerson(personNode));
+        }
 
-		graph.initNodes(); // Prepare nodes
+        // Gets the dimensions of each graphic node
+        for (GraphicMetric graphicNode : graphicNodes) {
+            graphicNode.metric.width = 100; // graphicNode.getWidth() or something
+            graphicNode.metric.height = 100; // graphicNode.getHeight()
+        }
 
-		// Add bond nodes
-		for( Bond bond : graph.getBonds() ) {
-			graphicNodes.add(new GraphicBond(bond));
-		}
+        graph.initNodes(); // Prepares nodes
 
-		graph.setMaxBitmapSize(1000); // So the lines can be distributed in groups
+        // Adds bond nodes
+        for (Bond bond : graph.getBonds()) {
+            graphicNodes.add(new GraphicBond(bond));
+        }
 
-		graph.placeNodes(); // Let the graph calculate final position of nodes and lines
+        graph.setMaxBitmapSize(1000); // So the lines can be distributed in groups
 
-		// Loop into the nodes to update their position on the cartesian plane of canvas
-		for( GraphicMetric graphicNode : graphicNodes ) {
-			p(graphicNode, "\t", graphicNode.metric.x, "/", graphicNode.metric.y);
-		}
-		// And display the lines
-		for( Set<Line> linesGroup : graph.getLines() ) {
-			for( Line line : linesGroup ) {
-				// parent
-				float x1 = line.x1;
-				float y1 = line.y1;
-				// child
-				float x2 = line.x2;
-				float y2 = line.y2;
-				// ...
-			}
-		}
-	}
+        graph.placeNodes(); // Lets the graph calculate final position of nodes and lines
 
-	// The graphical representation of a node (person or bond)
-	// In Android could extend a layout (RelativeLayout etc.)
-	abstract class GraphicMetric {
-		Metric metric;
-		GraphicMetric (Metric metric) {
-			this.metric = metric;
-		}
-		@Override
-		public String toString() {
-			return metric.toString();
-		}
-	}
+        // Loops into the nodes to update their position on the cartesian plane of canvas
+        for (GraphicMetric graphicNode : graphicNodes) {
+            p(graphicNode, "\t", graphicNode.metric.x, "/", graphicNode.metric.y);
+        }
+        // And displays the lines
+        for (Set<Line> linesGroup : graph.getLines()) {
+            for (Line line : linesGroup) {
+                // parent
+                float x1 = line.x1;
+                float y1 = line.y1;
+                // child
+                float x2 = line.x2;
+                float y2 = line.y2;
+                // ...
+            }
+        }
+    }
 
-	// The graphical representation of a person card
-	// In Android could extend a layout (LinearLayout etc.)
-	class GraphicPerson extends GraphicMetric {
-		GraphicPerson (PersonNode personNode) {
-			super(personNode);
-			// TODO display a person card
-		}
-	}
+    // The graphical representation of a node (person or bond)
+    // In Android could extend a layout (RelativeLayout etc.)
+    abstract class GraphicMetric {
+        Metric metric;
 
-	// The graphical representation of a bond between two persons of the same family
-	class GraphicBond extends GraphicMetric {
-		GraphicBond (Bond bond) {
-			super(bond);
-			// TODO display a family bond
-		}
-	}
+        GraphicMetric(Metric metric) {
+            this.metric = metric;
+        }
+
+        @Override
+        public String toString() {
+            return metric.toString();
+        }
+    }
+
+    // The graphical representation of a person card
+    // In Android could extend a layout (LinearLayout etc.)
+    class GraphicPerson extends GraphicMetric {
+        GraphicPerson(PersonNode personNode) {
+            super(personNode);
+            // TODO display a person card
+        }
+    }
+
+    // The graphical representation of a bond between two persons of the same family
+    class GraphicBond extends GraphicMetric {
+        GraphicBond(Bond bond) {
+            super(bond);
+            // TODO display a family bond
+        }
+    }
 }

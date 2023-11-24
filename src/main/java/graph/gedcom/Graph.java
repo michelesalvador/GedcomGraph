@@ -35,12 +35,16 @@ public class Graph {
     private int maxAbove; // Max upper generation of ancestors (positive number), excluding mini ancestries
     private int maxBelow; // Max generation of descendants, excluding mini progenies
 
-    public Graph(Gedcom gedcom) {
-        this.gedcom = gedcom;
+    public Graph() {
         animator = new Animator();
     }
 
     // Public methods
+
+    public Graph setGedcom(Gedcom gedcom) {
+        this.gedcom = gedcom;
+        return this;
+    }
 
     /**
      * If the fulcrum is child in more than one family, you can choose wich family to display.
