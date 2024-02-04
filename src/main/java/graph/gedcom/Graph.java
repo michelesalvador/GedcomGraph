@@ -19,8 +19,10 @@ import graph.gedcom.Util.Side;
  */
 public class Graph {
 
-    // Settings for public methods with default values
+    public Person fulcrum; // The central person of the diagram
     public int whichFamily; // Which family display if the fulcrum is child in more than one family
+
+    // Settings for public methods with default values
     private int ancestorGenerations = 3; // Generations to display
     private int greatUnclesGenerations = 2; // Uncles and great-uncles. Can't be more than ancestor generations.
     private boolean withSpouses = true;
@@ -143,6 +145,7 @@ public class Graph {
      * @param fulcrum The person that becomes the diagram center
      */
     public void startFrom(Person fulcrum) {
+        this.fulcrum = fulcrum;
 
         // Reset all values
         fulcrumNode = null;
@@ -198,7 +201,7 @@ public class Graph {
             // Fulcrum with marriages and siblings
             for (Person sibling : parentFamily.getChildren(gedcom)) {
                 if (sibling.equals(fulcrum) && fulcrumNode == null) {
-                    marriageAndChildren(fulcrum, parentNode, fulcrumGroup);
+                    marriageAndChildren(parentNode, fulcrumGroup);
                 } else if (siblingNephewGenerations > 0) {
                     Genus siblingGenus = findPersonGenus(sibling, parentNode, 0, Card.REGULAR, fulcrumGroup);
                     for (Node siblingNode : siblingGenus) {
@@ -229,7 +232,7 @@ public class Graph {
             }
         } else {
             // Fulcrum without parent family
-            marriageAndChildren(fulcrum, null, fulcrumGroup);
+            marriageAndChildren(null, fulcrumGroup);
         }
     }
 
@@ -372,7 +375,7 @@ public class Graph {
     }
 
     // Fulcrum with one or many marriages and their children
-    void marriageAndChildren(Person fulcrum, Node parentNode, Group group) {
+    void marriageAndChildren(Node parentNode, Group group) {
         Genus fulcrumGenus = findPersonGenus(fulcrum, parentNode, 0, Card.FULCRUM, group);
         for (Node node : fulcrumGenus) {
             // + 1 because we start from the generation before

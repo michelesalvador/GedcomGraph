@@ -27,7 +27,7 @@ public class Animator {
     int maxAbove;
     List<Node> nodes; // All person and family nodes regular and mini
     List<PersonNode> personNodes;
-    List<Bond> bonds;
+    List<Bond> bonds; // All the horizontal links between two partners
     List<Line> lines; // All the continuous lines ordered from left to right
     List<LineRow> lineRows; // All the continuous lines divided in groups in a 2D array
     List<Set<Line>> lineGroups; // All the continuous lines distributed in groups by proximity
