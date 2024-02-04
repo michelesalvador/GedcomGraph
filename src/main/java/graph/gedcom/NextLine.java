@@ -10,11 +10,13 @@ public class NextLine extends Line {
     Bond bond;
     PersonNode partner;
     Side side;
+    boolean leftToRight;
 
     public NextLine(FamilyNode familyNode) {
         bond = familyNode.bond;
         partner = familyNode.partners.get(0);
         side = familyNode.side;
+        leftToRight = familyNode.leftToRight;
     }
 
     @Override
@@ -22,7 +24,11 @@ public class NextLine extends Line {
         if (bond != null) {
             x1 = bond.centerX();
             y1 = bond.centerY();
-            x2 = side == Side.LEFT ? bond.x : partner.x; // otherwise partner.centerX();
+            if (leftToRight) {
+                x2 = side == Side.LEFT ? bond.x : partner.x; // otherwise partner.centerX();
+            } else {
+                x2 = side == Side.RIGHT ? bond.x : partner.x;
+            }
             y2 = partner.centerY();
         }
     }

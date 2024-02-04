@@ -37,6 +37,7 @@ public class Animator {
     List<Group> groups; // Array of groups of PersonNodes and FamilyNodes (not mini)
     List<GroupRow> groupRows;
     List<UnionRow> unionRows; // Array of rows of Unions
+    boolean leftToRight; // False means right to left layout
     float maxBitmapSize;
     float biggestPathSize;
 
@@ -279,8 +280,7 @@ public class Animator {
             groupRow.placeAncestors();
         }
 
-        // Outdistance ancestor unions and descendant nodes row by row, reducing lines
-        // overlap
+        // Outdistance ancestor unions and descendant nodes row by row, reducing lines overlap
         float count = 20;
         float forces = Float.MAX_VALUE;
         while (count > 0 && Math.abs(forces) > 1) {
@@ -296,18 +296,18 @@ public class Animator {
             count--;
         }
 
-        // Horizontally place acquired mini ancestry and all mini progeny
+        // Horizontally places acquired mini ancestry and all mini progeny
         for (Node node : nodes) {
             node.placeAcquiredOriginX();
             node.placeMiniChildrenX();
         }
-        // Place mini origins of the first row
+        // Places mini origins of the first row
         for (Group group : groupRows.get(0)) {
             if (group.origin != null)
                 group.placeOriginX();
         }
 
-        // Find the diagram margins to fit exactly around every node
+        // Finds the diagram margins to fit exactly around every node
         float minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
         float maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
         for (Node node : nodes) {
@@ -323,10 +323,25 @@ public class Animator {
         width = maxX - minX;
         height = maxY - minY;
 
-        // Correct the position of each node
+        // Corrects the position of each node
         for (Node node : nodes) {
             node.setX(node.x - minX);
             node.setY(node.y - minY);
+        }
+
+        // Reverses nodes for right to left layout
+        if (!leftToRight) {
+            for (Node node : nodes) {
+                if (node instanceof FamilyNode) {
+                    node.x = width - node.x - node.width; // For back lines
+                }
+            }
+            for (PersonNode node : personNodes) {
+                node.x = width - node.x - node.width;
+            }
+            for (Bond bond : bonds) {
+                bond.x = width - bond.x - bond.width;
+            }
         }
 
         distributeLines(lines, lineRows, lineGroups);

@@ -166,6 +166,11 @@ public class PersonNode extends Node {
     }
 
     @Override
+    float simpleCenterX() {
+        return x + width / 2;
+    }
+
+    @Override
     void setX(float x) {
         force += x - this.x;
         this.x = x;

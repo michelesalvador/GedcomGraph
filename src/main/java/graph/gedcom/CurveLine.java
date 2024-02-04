@@ -15,7 +15,7 @@ public class CurveLine extends Line {
 
     @Override
     void update() {
-        x1 = origin.centerX();
+        x1 = origin.simpleCenterX();
         y1 = origin.y + origin.height;
         x2 = personNode.centerX();
         y2 = personNode.y;

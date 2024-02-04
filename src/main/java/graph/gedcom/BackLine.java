@@ -12,6 +12,7 @@ public class BackLine extends Line {
     Side side;
     Match match;
     boolean noPartners;
+    boolean leftToRight;
     FamilyNode node;
 
     public BackLine(FamilyNode familyNode) {
@@ -19,19 +20,32 @@ public class BackLine extends Line {
         side = familyNode.side;
         match = familyNode.getMatch();
         noPartners = familyNode.partners.isEmpty();
+        leftToRight = familyNode.leftToRight;
         node = familyNode;
     }
 
     @Override
     void update() {
         if (bond != null) {
-            x1 = side == Side.LEFT ? node.next.x : node.prev.x + node.prev.width;
+            if (leftToRight) {
+                x1 = side == Side.LEFT ? node.next.x : node.prev.x + node.prev.width;
+            } else {
+                x1 = side == Side.RIGHT ? node.prev.x : node.next.x + node.next.width;
+            }
             y1 = bond.centerY();
-            if (bond.marriageDate != null)
-                x2 = side == Side.LEFT ? bond.x + bond.width : bond.x;
-            else
-                x2 = noPartners && match == Match.MIDDLE ? side == Side.LEFT ? bond.x + bond.overlap : bond.x + bond.width - bond.overlap
-                        : bond.centerX();
+            if (leftToRight) {
+                if (bond.marriageDate != null)
+                    x2 = side == Side.LEFT ? bond.x + bond.width : bond.x;
+                else
+                    x2 = noPartners && match == Match.MIDDLE ? side == Side.LEFT ? bond.x + bond.overlap : bond.x + bond.width - bond.overlap
+                            : bond.centerX();
+            } else {
+                if (bond.marriageDate != null)
+                    x2 = side == Side.RIGHT ? bond.x + bond.width : bond.x;
+                else
+                    x2 = noPartners && match == Match.MIDDLE ? side == Side.RIGHT ? bond.x + bond.overlap : bond.x + bond.width - bond.overlap
+                            : bond.centerX();
+            }
             y2 = bond.centerY();
         }
     }

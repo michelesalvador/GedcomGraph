@@ -25,12 +25,14 @@ public class FamilyNode extends Node {
     List<PersonNode> partners;
     Bond bond;
     Side side; // Following or previous marriage: LEFT is a husband, RIGHT is a wife
+    boolean leftToRight; // Not used here but passed to lines
 
-    public FamilyNode(Family spouseFamily, boolean mini, Side side) {
+    public FamilyNode(Family spouseFamily, boolean mini, Side side, boolean leftToRight) {
         super();
         this.spouseFamily = spouseFamily;
         this.mini = mini;
         this.side = side;
+        this.leftToRight = leftToRight;
         partners = new ArrayList<>();
     }
 
@@ -155,7 +157,16 @@ public class FamilyNode extends Node {
         return height / 2;
     }
 
-    // Place partners and bond
+    @Override
+    float simpleCenterX() {
+        if (bond != null) {
+            return bond.x + bond.width / 2;
+        } else {
+            return x + width / 2;
+        }
+    }
+
+    // Places partners and bond
     @Override
     void setX(float x) {
         force += x - this.x;

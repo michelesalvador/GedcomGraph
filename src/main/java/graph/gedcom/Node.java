@@ -44,6 +44,11 @@ public abstract class Node extends Metric {
     // Calculate the to-center width of the main node included bond and partner
     abstract float getMainWidth(Position pos);
 
+    /**
+     * Alternative to centerX(), called eventually by curve lines, when bond is already in place.
+     */
+    abstract float simpleCenterX();
+
     // Horizontally distribute progeny nodes
     void placeYouthX() {
         // Place stallion child and their spouses

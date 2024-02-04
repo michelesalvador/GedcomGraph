@@ -36,6 +36,7 @@ public class Graph {
     private Group fulcrumGroup;
     private int maxAbove; // Max upper generation of ancestors (positive number), excluding mini ancestries
     private int maxBelow; // Max generation of descendants, excluding mini progenies
+    private boolean leftToRight;
 
     public Graph() {
         animator = new Animator();
@@ -86,6 +87,12 @@ public class Graph {
 
     public Graph maxUnclesCousins(int num) {
         uncleCousinGenerations = num;
+        return this;
+    }
+
+    public Graph setLayoutDirection(boolean leftToRight) {
+        this.leftToRight = leftToRight;
+        animator.leftToRight = leftToRight;
         return this;
     }
 
@@ -498,7 +505,7 @@ public class Graph {
         if ((type == Card.FULCRUM || type == Card.REGULAR) && spouseFamily != null) {
             List<Person> spouses = getSpouses(spouseFamily);
             if (spouses.size() > 1 && withSpouses) { // Many spouses
-                familyNode = new FamilyNode(spouseFamily, false, Side.NONE);
+                familyNode = new FamilyNode(spouseFamily, false, Side.NONE, leftToRight);
                 familyNode.generation = generation;
                 familyNode.matches.add(match);
                 for (Person spouse : spouses) {
@@ -534,7 +541,7 @@ public class Graph {
      * @return A PersonNode or a FamilyNode
      */
     private FamilyNode createNodeFromFamily(Family spouseFamily, int generation, Card type) {
-        FamilyNode newNode = new FamilyNode(spouseFamily, type == Card.ANCESTRY, Side.NONE);
+        FamilyNode newNode = new FamilyNode(spouseFamily, type == Card.ANCESTRY, Side.NONE, leftToRight);
         newNode.generation = generation;
         List<Person> spouses = getSpouses(spouseFamily);
         for (Person spouse : spouses) {
@@ -555,7 +562,7 @@ public class Graph {
      * @param excluded Person that already has a main marriage
      */
     private FamilyNode createNextFamilyNode(Family spouseFamily, Person excluded, int generation, Side side, Match match) {
-        FamilyNode familyNode = new FamilyNode(spouseFamily, false, side);
+        FamilyNode familyNode = new FamilyNode(spouseFamily, false, side, leftToRight);
         familyNode.generation = generation;
         familyNode.matches.add(match);
         if (withSpouses) {
