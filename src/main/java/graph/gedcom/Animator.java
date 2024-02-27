@@ -118,12 +118,12 @@ public class Animator {
                 posY += rowMaxHeight[gen + maxAbove] / 2 + VERTICAL_SPACE + rowMaxHeight[gen + maxAbove + 1] / 2;
         }
 
-        // Initialize the relation between groups and their origin
+        // Initializes the relation between groups and their origin
         for (Group group : groups) {
             group.setOrigin();
         }
 
-        // Create the Lines
+        // Creates the Lines
         lines.clear();
         backLines.clear();
         for (Node node : nodes) {
@@ -258,13 +258,12 @@ public class Animator {
 
         /* Horizontal positioning */
 
-        // The fulcrum family could be the only one and need to be placed
+        // The fulcrum family could be the only one and needs to be placed
         if (maxAbove == 0 && fulcrumNode.familyNode != null) {
             fulcrumNode.familyNode.setX(0);
         }
 
-        // Position the descendants starting from generation -1 (if existing) or from
-        // fulcrum generation down
+        // Positions the descendants starting from generation -1 (if existing) or from fulcrum generation down
         int start = Math.max(0, maxAbove - 1);
         for (int r = start; r < unionRows.size(); r++) {
             UnionRow unionRow = unionRows.get(r);
@@ -272,7 +271,7 @@ public class Animator {
             unionRow.placeYouths();
         }
 
-        // Ascend generations resolving overlaps and disposing ancestors and uncles
+        // Ascends generations resolving overlaps and disposing ancestors and uncles
         // starting from generation -1 (if exists) or from fulcrum generation up
         for (int r = start; r >= 0; r--) {
             GroupRow groupRow = groupRows.get(r);
@@ -280,7 +279,7 @@ public class Animator {
             groupRow.placeAncestors();
         }
 
-        // Outdistance ancestor unions and descendant nodes row by row, reducing lines overlap
+        // Outdistances ancestor unions and descendant nodes row by row, reducing lines overlap
         float count = 20;
         float forces = Float.MAX_VALUE;
         while (count > 0 && Math.abs(forces) > 1) {

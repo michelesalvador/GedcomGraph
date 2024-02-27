@@ -52,10 +52,10 @@ public class Util {
 
         static Match get(int totFamilies, Side side, int index) {
             if (totFamilies > 1) {
-                if ((side == Side.RIGHT && index == 0) || (side == Side.LEFT && index == totFamilies - 1))
-                    return NEAR;
-                else if ((side == Side.RIGHT && index == totFamilies - 1) || (side == Side.LEFT && index == 0))
+                if ((side == Side.LEFT && index == 0) || (side == Side.RIGHT && index == totFamilies - 1))
                     return FAR;
+                else if ((side == Side.LEFT && index == totFamilies - 1) || (side == Side.RIGHT && index == 0))
+                    return NEAR;
                 else
                     return MIDDLE;
             }

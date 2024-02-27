@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.folg.gedcom.model.Family;
+import org.folg.gedcom.model.Person;
 
 import graph.gedcom.Util.Branch;
 import graph.gedcom.Util.Match;
@@ -20,6 +21,7 @@ import graph.gedcom.Util.Position;
 public abstract class Node extends Metric {
 
     public Family spouseFamily; // The person in this node is spouse of this family
+    List<Person> children; // Children of one or many families of PersonNode or of a FamilyNode
     // List of siblings to which this node belongs
     // Warning: an ancestor node can belong at the same time to 2 groups, making this 'group' useless
     Group group;
@@ -35,6 +37,7 @@ public abstract class Node extends Metric {
     float force;
 
     Node() {
+        children = new ArrayList<>();
         matches = new ArrayList<>();
     }
 

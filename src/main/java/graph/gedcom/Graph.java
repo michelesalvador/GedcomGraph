@@ -163,7 +163,7 @@ public class Graph {
         maxAbove = 0;
         maxBelow = 0;
 
-        // Create all the nodes of the diagram
+        // Creates all the nodes of the diagram
         List<Family> fulcrumParents = fulcrum.getParentFamilies(gedcom);
         fulcrumGroup = createGroup(0, false, Branch.NONE);
         if (!fulcrumParents.isEmpty()) {
@@ -194,6 +194,8 @@ public class Graph {
                     findAncestors(first, firstParentGroup, 1);
                     // Paternal uncles
                     findUncles(first, firstParentGroup, parentNode.getPersonNodes().size() == 1 ? Side.LEFT : Side.NONE);
+                    // Paternal half-siblings
+                    findHalfSiblings(first);
                 }
                 // Other partners of the second parent
                 if (second != null) {
@@ -230,6 +232,8 @@ public class Graph {
                         findAncestorGenus(first, secondParentGroup, Side.RIGHT);
                     }
                     if (second != null) {
+                        // Half-siblings
+                        findHalfSiblings(second);
                         // Uncles and grand-parents
                         findAncestors(second, secondParentGroup, 1);
                         // Uncles
@@ -302,11 +306,13 @@ public class Graph {
         }
     }
 
-    // Finds multiple marriages of direct ancestor
+    /**
+     * Finds multiple marriages of direct ancestor.
+     */
     void findAncestorGenus(PersonNode personNode, Group group, Side side) {
         Genus genus = new Genus();
         genus.add(personNode.familyNode);
-        if (personNode.type == Card.REGULAR) {
+        if (personNode.type == Card.REGULAR && withSpouses) {
             List<Family> families = personNode.person.getSpouseFamilies(gedcom);
             if (families.size() > 1) {
                 families.remove(personNode.spouseFamily);
@@ -315,6 +321,7 @@ public class Graph {
                     Family nextFamily = families.get(i);
                     Match match = Match.get2(families.size(), side, i);
                     FamilyNode nextFamilyNode = createNextFamilyNode(nextFamily, personNode.person, generation, side, match);
+                    nextFamilyNode.children.addAll(nextFamily.getChildren(gedcom));
                     if (side == Side.LEFT) {
                         group.addNode(nextFamilyNode, group.list.indexOf(personNode.familyNode));
                         genus.add(genus.indexOf(personNode.familyNode), nextFamilyNode);
@@ -325,9 +332,10 @@ public class Graph {
                 }
                 for (Node node : genus)
                     if (!node.equals(personNode.familyNode)) {
-                        if (generation < -1) // Mini progeny
-                            findDescendants(node, generation, 0, false);
-                        else
+                        if (generation < -1) { // Mini progeny
+                            if (-generation <= greatUnclesGenerations + 1)
+                                findDescendants(node, generation, 0, false);
+                        } else if (siblingNephewGenerations > 0) // Regular descendants
                             findDescendants(node, -1, siblingNephewGenerations + 1, side == Side.LEFT ? true : false);
                     }
             }
@@ -381,7 +389,28 @@ public class Graph {
         }
     }
 
-    // Fulcrum with one or many marriages and their children
+    /**
+     * In case the acquired spouses are hidden, finds half-siblings of fulcrum.
+     *
+     * @param parentNode The parent of fulcrum
+     */
+    private void findHalfSiblings(PersonNode parentNode) {
+        if (!withSpouses) {
+            for (Person halfSibling : parentNode.children) {
+                if (siblingNephewGenerations > 0) {
+                    Genus halfSiblingGenus = findPersonGenus(halfSibling, parentNode, 0, Card.REGULAR, fulcrumGroup);
+                    for (Node halfSiblingNode : halfSiblingGenus) { // Actually is only one node
+                        ((PersonNode)halfSiblingNode).isHalfSibling = true;
+                        findDescendants(halfSiblingNode, 0, siblingNephewGenerations, false);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds one or many marriages of fulcrum and their children.
+     */
     void marriageAndChildren(Node parentNode, Group group) {
         Genus fulcrumGenus = findPersonGenus(fulcrum, parentNode, 0, Card.FULCRUM, group);
         for (Node node : fulcrumGenus) {
@@ -399,14 +428,13 @@ public class Graph {
      * @param toTheLeft       The new group will be placed to the left of fulcrum group
      */
     private void findDescendants(Node commonNode, int startGeneration, int maxGenerations, boolean toTheLeft) {
-        Family spouseFamily = commonNode.spouseFamily;
-        if (spouseFamily != null && !spouseFamily.getChildren(gedcom).isEmpty()) {
+        if (!commonNode.children.isEmpty()) {
             int generChild = commonNode.generation + 1;
             boolean childMini = generChild >= maxGenerations + startGeneration;
             if (!childMini && generChild > maxBelow)
                 maxBelow = generChild;
             Group childGroup = createGroup(generChild, childMini, Branch.NONE, toTheLeft);
-            for (Person child : spouseFamily.getChildren(gedcom)) {
+            for (Person child : commonNode.children) {
                 Genus childGenus = findPersonGenus(child, commonNode, generChild, childMini ? Card.PROGENY : Card.REGULAR, childGroup);
                 if (!childMini) {
                     for (Node childNode : childGenus) {
@@ -418,13 +446,18 @@ public class Graph {
     }
 
     /**
-     * Finds one or multiple marriages of one person. Used for fulcrum, their siblings, descendants, uncles.
+     * Finds one or multiple marriages of a person. Used for fulcrum, their (half-)siblings, descendants, uncles.
      */
     Genus findPersonGenus(Person person, Node parentNode, int generation, Card type, Group group) {
         Genus genus = new Genus();
         List<Family> families = person.getSpouseFamilies(gedcom);
-        if (families.isEmpty() || (type == Card.PROGENY)) {
+        if (families.isEmpty() || !withSpouses || type == Card.PROGENY) {
             Node singleNode = createNodeFromPerson(person, null, parentNode, generation, type, Match.SOLE);
+            if (type != Card.PROGENY) {
+                for (Family family : families) {
+                    singleNode.children.addAll(family.getChildren(gedcom));
+                }
+            }
             if (group != null)
                 group.addNode(singleNode);
             genus.add(singleNode);
@@ -443,6 +476,7 @@ public class Graph {
                 default: // Middle or last marriage
                     partnerNode = createNextFamilyNode(family, person, generation, side, match);
                 }
+                partnerNode.children.addAll(family.getChildren(gedcom));
                 if (group != null)
                     group.addNode(partnerNode);
                 genus.add(partnerNode);
@@ -466,7 +500,9 @@ public class Graph {
         }
     }
 
-    // Creates the container for siblings and their spouses (containing multiple marriages also)
+    /**
+     * Creates the container for siblings and their spouses (containing also multiple marriages).
+     */
     Group createGroup(int generation, boolean mini, Branch branch) {
         return createGroup(generation, mini, branch, false);
     }
@@ -547,8 +583,13 @@ public class Graph {
         for (Person spouse : spouses) {
             PersonNode personNode = new PersonNode(gedcom, spouse, type);
             personNode.generation = generation;
-            if (type == Card.REGULAR) // Mini ancestry excluded
+            if (type == Card.REGULAR) { // Mini ancestry excluded
                 newNode.matches.add(spouse.getSpouseFamilyRefs().size() > 1 ? Match.NEAR : Match.SOLE);
+                List<Family> otherFamilies = spouse.getSpouseFamilies(gedcom);
+                otherFamilies.remove(spouseFamily);
+                for (Family family : otherFamilies)
+                    personNode.children.addAll(family.getChildren(gedcom));
+            }
             newNode.addPartner(personNode);
         }
         newNode.createBond();
@@ -580,7 +621,9 @@ public class Graph {
         return familyNode;
     }
 
-    // Returns a list of all spouses in a family alternating husbands and wives
+    /**
+     * @return A list of all spouses in a family alternating husbands and wives
+     */
     List<Person> getSpouses(Family family) {
         List<Person> persons = new ArrayList<>();
         for (Person husband : family.getHusbands(gedcom))

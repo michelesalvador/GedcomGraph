@@ -34,7 +34,9 @@ public class UnionRow extends ArrayList<Union> {
         }
     }
 
-    // Resolve overlaps of this row of unions
+    /**
+     * Resolves overlaps of all nodes in this row of unions.
+     */
     void resolveOverlap() {
         Node left = central;
         while (left.prev != null) {

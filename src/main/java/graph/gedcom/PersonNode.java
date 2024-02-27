@@ -15,6 +15,9 @@ import graph.gedcom.Util.Card;
 import graph.gedcom.Util.Match;
 import graph.gedcom.Util.Position;
 
+/**
+ * A node representig a single person.
+ */
 public class PersonNode extends Node {
 
     private Gedcom gedcom;
@@ -25,9 +28,9 @@ public class PersonNode extends Node {
     public boolean acquired; // Is this person acquired spouse (not blood relative)?
     public boolean dead;
     public int amount; // Number to display in little ancestry or progeny
+    boolean isHalfSibling; // This person is a half-sibling of fulcrum
     CurveLine line; // Curve line connecting this person with the origin above
 
-    // Creates a node rappresentig a person
     public PersonNode(Gedcom gedcom, Person person, Card type) {
         super();
         this.gedcom = gedcom;
@@ -79,6 +82,8 @@ public class PersonNode extends Node {
 
     @Override
     PersonNode getMainPersonNode() {
+        if (isHalfSibling)
+            return null;
         return this;
     }
 

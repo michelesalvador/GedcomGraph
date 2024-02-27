@@ -31,7 +31,7 @@ public class Group extends Metric {
         this.branch = branch;
     }
 
-    // Add a node to this group and vice-versa
+    // Adds a node to this group and vice-versa
     void addNode(Node node) {
         addNode(node, -1);
     }
