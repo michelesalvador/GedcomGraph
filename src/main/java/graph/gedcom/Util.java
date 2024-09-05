@@ -7,6 +7,7 @@ import org.folg.gedcom.model.Person;
 public class Util {
 
     public static int VERTICAL_SPACE = 90; // Vertical space between rows of nodes
+    public static int VERTICAL_SPACE_CALC; // Same resized on displayNumbers
     public static int HORIZONTAL_SPACE = 15; // Horizontal space between nodes
     public static int UNION_DISTANCE = 25; // Horizontal space between unions
 
@@ -18,8 +19,8 @@ public class Util {
     public static int HEARTH_DIAMETER = 8; // Family node without date
     public static int MINI_HEARTH_DIAMETER = 6; // Mini family node without date
 
-    public static int LITTLE_GROUP_DISTANCE = 60; // Vertical space below family node without partners or below mini ancestry,
-                                                  // both with many children
+    public static int LITTLE_GROUP_DISTANCE = 60; // Vertical space below family node without partners or below mini ancestry, both with many children
+    public static int LITTLE_GROUP_DISTANCE_CALC; // Same resized on displayNumbers
     public static int ANCESTRY_DISTANCE = 12; // Vertical space between mini ancestry and person node
     public static int PROGENY_DISTANCE = 16; // Vertical space between family node and mini progeny
     public static int PROGENY_PLAY = 12; // Horizontal space between progeny mini cards

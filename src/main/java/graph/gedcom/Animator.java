@@ -5,7 +5,7 @@ import static graph.gedcom.Util.MARRIAGE_INNER_WIDTH;
 import static graph.gedcom.Util.MARRIAGE_WIDTH;
 import static graph.gedcom.Util.MINI_BOND_WIDTH;
 import static graph.gedcom.Util.PROGENY_DISTANCE;
-import static graph.gedcom.Util.VERTICAL_SPACE;
+import static graph.gedcom.Util.VERTICAL_SPACE_CALC;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,7 +65,7 @@ public class Animator {
     }
 
     // Preparing the nodes
-    void initNodes(PersonNode fulcrumNode, int maxAbove, int maxBelow) {
+    void initNodes(PersonNode fulcrumNode, int maxAbove, int maxBelow, boolean withNumbers) {
 
         this.fulcrumNode = fulcrumNode;
         this.maxAbove = maxAbove;
@@ -78,7 +78,7 @@ public class Animator {
         float[] rowMaxHeight = new float[totalRows];
 
         for (Node node : nodes) {
-            // Calculate sizes of each family node
+            // Calculates sizes of each family node
             if (node instanceof FamilyNode) {
                 FamilyNode familyNode = (FamilyNode)node;
                 for (Node partner : familyNode.partners) {
@@ -107,7 +107,7 @@ public class Animator {
                 rowMaxHeight[node.generation + maxAbove] = node.height;
         }
 
-        // Vertical position of the generation rows
+        // Calculates vertical position of the generation rows
         unionRows.clear();
         groupRows.clear();
         float posY = rowMaxHeight[0] / 2;
@@ -115,12 +115,24 @@ public class Animator {
             unionRows.add(new UnionRow(gen, posY));
             groupRows.add(new GroupRow(gen));
             if (gen + maxAbove < totalRows - 1)
-                posY += rowMaxHeight[gen + maxAbove] / 2 + VERTICAL_SPACE + rowMaxHeight[gen + maxAbove + 1] / 2;
+                posY += rowMaxHeight[gen + maxAbove] / 2 + VERTICAL_SPACE_CALC + rowMaxHeight[gen + maxAbove + 1] / 2;
         }
 
         // Initializes the relation between groups and their origin
         for (Group group : groups) {
             group.setOrigin();
+        }
+
+        // Orrible hack in case little numbers are not displayed: removes mini origins that have one child only (or that are stallion)
+        if (!withNumbers) {
+            for (PersonNode personNode : personNodes) {
+                Node origin = personNode.origin;
+                if (origin != null && origin.mini && (origin.youth.list.size() == 1 || origin.youth.stallion != null)) {
+                    personNode.origin = null;
+                    nodes.remove(origin);
+                    bonds.remove(((FamilyNode)origin).bond);
+                }
+            }
         }
 
         // Creates the Lines
@@ -147,9 +159,12 @@ public class Animator {
             }
         }
 
-        // Populate groupRows from groups
+        // Populates groupRows from groups
         for (Group group : groups) {
             if (!group.mini && !group.list.isEmpty()) {
+                // Excludes empty ancestor from the second line down until fulcrum row excluded
+                if (-group.generation < maxAbove && group.generation < 0 && group.list.size() == 1 && group.list.get(0).getPersonNodes().isEmpty())
+                    continue;
                 groupRows.get(group.generation + maxAbove).add(group);
             }
         }
@@ -158,11 +173,9 @@ public class Animator {
         for (GroupRow row : groupRows) {
             Node previous = null;
             for (Group group : row) {
-                for (int n = 0; n < group.list.size(); n++) {
-                    Node node = group.list.get(n);
-                    if (!(node.getPersonNodes().isEmpty() && node.isAncestor)) { // Empty ancestors are excluded
-                        if (!node.equals(previous))
-                            node.prev = previous;
+                for (Node node : group.list) {
+                    if (!node.equals(previous)) {
+                        node.prev = previous;
                         if (node.prev != null)
                             node.prev.next = node;
                         previous = node;
@@ -171,10 +184,10 @@ public class Animator {
             }
         }
 
-        // Populate unionRows from groups
+        // Populates unionRows from groupRows
         // Couples of ancestors groups with common ancestor node are joined in a single Union
-        for (Group group : groups) {
-            if (!group.mini && !group.list.isEmpty()) {
+        for (GroupRow groupRow : groupRows) {
+            for (Group group : groupRow) {
                 UnionRow row = unionRows.get(group.generation + maxAbove);
                 Union union = null;
                 boolean joinExistingGroup = false;
@@ -300,10 +313,14 @@ public class Animator {
             node.placeAcquiredOriginX();
             node.placeMiniChildrenX();
         }
-        // Places mini origins of the first row
-        for (Group group : groupRows.get(0)) {
-            if (group.origin != null)
-                group.placeOriginX();
+
+        // Horizontally places mini origins and origins without ancestors
+        for (int r = 0; r < maxAbove; r++) {
+            GroupRow groupRow = groupRows.get(r);
+            for (Group group : groupRow) {
+                if (group.isOriginMiniOrEmpty())
+                    group.placeOriginX();
+            }
         }
 
         // Finds the diagram margins to fit exactly around every node

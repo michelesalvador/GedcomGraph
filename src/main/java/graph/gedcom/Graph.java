@@ -29,6 +29,7 @@ public class Graph {
     private int descendantGenerations = 3;
     private int siblingNephewGenerations = 2; // Siblings and generations of their descendants
     private int uncleCousinGenerations = 2; // Uncles and cousins. First uncle generation overlaps to great-uncle generations.
+    private boolean withNumbers = true; // Displays ancestor and descendant little numbers
 
     private Gedcom gedcom;
     private Animator animator;
@@ -90,6 +91,13 @@ public class Graph {
         return this;
     }
 
+    public Graph displayNumbers(boolean display) {
+        withNumbers = display;
+        Util.VERTICAL_SPACE_CALC = display ? Util.VERTICAL_SPACE : Util.VERTICAL_SPACE / 2;
+        Util.LITTLE_GROUP_DISTANCE_CALC = display ? Util.LITTLE_GROUP_DISTANCE : Util.LITTLE_GROUP_DISTANCE / 2;
+        return this;
+    }
+
     public Graph setLayoutDirection(boolean leftToRight) {
         this.leftToRight = leftToRight;
         animator.leftToRight = leftToRight;
@@ -138,7 +146,7 @@ public class Graph {
 
     // Preparation of the nodes
     public void initNodes() {
-        animator.initNodes(fulcrumNode, maxAbove, maxBelow);
+        animator.initNodes(fulcrumNode, maxAbove, maxBelow, withNumbers);
     }
 
     // Final displacement of the nodes
@@ -333,7 +341,7 @@ public class Graph {
                 for (Node node : genus)
                     if (!node.equals(personNode.familyNode)) {
                         if (generation < -1) { // Mini progeny
-                            if (-generation <= greatUnclesGenerations + 1)
+                            if (withNumbers && -generation <= greatUnclesGenerations + 1)
                                 findDescendants(node, generation, 0, false);
                         } else if (siblingNephewGenerations > 0) // Regular descendants
                             findDescendants(node, -1, siblingNephewGenerations + 1, side == Side.LEFT ? true : false);
@@ -431,6 +439,8 @@ public class Graph {
         if (!commonNode.children.isEmpty()) {
             int generChild = commonNode.generation + 1;
             boolean childMini = generChild >= maxGenerations + startGeneration;
+            if (childMini && !withNumbers)
+                return;
             if (!childMini && generChild > maxBelow)
                 maxBelow = generChild;
             Group childGroup = createGroup(generChild, childMini, Branch.NONE, toTheLeft);
@@ -488,15 +498,17 @@ public class Graph {
     // Finds little ancestry above the acquired spouse
     void findAcquiredAncestry(PersonNode card) {
         card.acquired = true;
-        List<Family> parentFamilies = card.person.getParentFamilies(gedcom);
-        if (!parentFamilies.isEmpty()) {
-            Family family = parentFamilies.get(parentFamilies.size() - 1);
-            Node ancestry = createNodeFromFamily(family, card.generation - 1, Card.ANCESTRY);
-            card.origin = ancestry;
-            if (ancestry.getHusband() != null)
-                ancestry.getHusband().acquired = true;
-            if (ancestry.getWife() != null)
-                ancestry.getWife().acquired = true;
+        if (withNumbers) {
+            List<Family> parentFamilies = card.person.getParentFamilies(gedcom);
+            if (!parentFamilies.isEmpty()) {
+                Family family = parentFamilies.get(parentFamilies.size() - 1);
+                Node ancestry = createNodeFromFamily(family, card.generation - 1, Card.ANCESTRY);
+                card.origin = ancestry;
+                if (ancestry.getHusband() != null)
+                    ancestry.getHusband().acquired = true;
+                if (ancestry.getWife() != null)
+                    ancestry.getWife().acquired = true;
+            }
         }
     }
 
@@ -579,18 +591,22 @@ public class Graph {
     private FamilyNode createNodeFromFamily(Family spouseFamily, int generation, Card type) {
         FamilyNode newNode = new FamilyNode(spouseFamily, type == Card.ANCESTRY, Side.NONE, leftToRight);
         newNode.generation = generation;
-        List<Person> spouses = getSpouses(spouseFamily);
-        for (Person spouse : spouses) {
-            PersonNode personNode = new PersonNode(gedcom, spouse, type);
-            personNode.generation = generation;
-            if (type == Card.REGULAR) { // Mini ancestry excluded
-                newNode.matches.add(spouse.getSpouseFamilyRefs().size() > 1 ? Match.NEAR : Match.SOLE);
-                List<Family> otherFamilies = spouse.getSpouseFamilies(gedcom);
-                otherFamilies.remove(spouseFamily);
-                for (Family family : otherFamilies)
-                    personNode.children.addAll(family.getChildren(gedcom));
+        if (type == Card.REGULAR || withNumbers) {
+            List<Person> spouses = getSpouses(spouseFamily);
+            for (Person spouse : spouses) {
+                PersonNode personNode = new PersonNode(gedcom, spouse, type);
+                personNode.generation = generation;
+                if (type == Card.REGULAR) { // Mini ancestry excluded
+                    // Adds a match to newNode
+                    newNode.matches.add(spouse.getSpouseFamilyRefs().size() > 1 ? Match.NEAR : Match.SOLE);
+                    // Adds children to personNode
+                    List<Family> otherFamilies = spouse.getSpouseFamilies(gedcom);
+                    otherFamilies.remove(spouseFamily);
+                    for (Family family : otherFamilies)
+                        personNode.children.addAll(family.getChildren(gedcom));
+                }
+                newNode.addPartner(personNode);
             }
-            newNode.addPartner(personNode);
         }
         newNode.createBond();
         animator.addNode(newNode);

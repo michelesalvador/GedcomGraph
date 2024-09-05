@@ -2,7 +2,7 @@ package graph.gedcom;
 
 import static graph.gedcom.Util.ANCESTRY_DISTANCE;
 import static graph.gedcom.Util.HORIZONTAL_SPACE;
-import static graph.gedcom.Util.LITTLE_GROUP_DISTANCE;
+import static graph.gedcom.Util.LITTLE_GROUP_DISTANCE_CALC;
 import static graph.gedcom.Util.UNION_DISTANCE;
 
 import java.util.ArrayList;
@@ -141,7 +141,7 @@ public class Group extends Metric {
     // Places mini origin or regular origin without partners
     // Different distance whether this group has one node or multiple nodes
     void placeOriginY() {
-        origin.setY(y - (list.size() > 1 && stallion == null ? LITTLE_GROUP_DISTANCE : ANCESTRY_DISTANCE) - origin.height);
+        origin.setY(y - (list.size() > 1 && stallion == null ? LITTLE_GROUP_DISTANCE_CALC : ANCESTRY_DISTANCE) - origin.height);
     }
 
     // How much this descendant group can move to the left (negative) or to the right (positive) respect origin center

@@ -33,7 +33,7 @@ public class Diagram {
         // Instantiates a graph
         Graph graph = new Graph();
         graph.setGedcom(gedcom).maxAncestors(5).maxGreatUncles(4).displaySpouses(true).maxDescendants(3).maxSiblingsNephews(2)
-                .maxUnclesCousins(2).startFrom(gedcom.getPerson("I1"));
+                .maxUnclesCousins(2).displayNumbers(true).startFrom(gedcom.getPerson("I1"));
 
         p(graph);
 
