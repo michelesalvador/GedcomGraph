@@ -65,7 +65,7 @@ public class PersonNode extends Node {
 
     @Override
     boolean hasOrigins() {
-        return origin != null;
+        return origin != null && !origin.mini;
     }
 
     @Override

@@ -56,6 +56,43 @@ public class UnionRow extends ArrayList<Union> {
         }
     }
 
+    /**
+     * Horizontaly aligns ancestor unions both to origins and to youth, starting from central union. To be called many times.
+     */
+    void alignToEverything() {
+        // Probably could be done in a simple single loop
+        int center = indexOf(central.union);
+        for (int i = center; i >= 0; i--) {
+            completeAlignToEverything(i);
+        }
+        for (int i = center + 1; i < size(); i++) {
+            completeAlignToEverything(i);
+        }
+        resolveOverlap();
+    }
+
+    private void completeAlignToEverything(int i) {
+        Union union = get(i);
+        union.updateX(); // Necessary
+        float shift = union.alignOverYouth() + union.alignUnderOrigins(true);
+        if (shift != 0) {
+            union.setX(union.x + shift / 2); // An average of the two values
+        }
+    }
+
+    /**
+     * Final alignement of unions under double origins to remove lines overlap. To be called once.
+     */
+    void alignUnderOrigins() {
+        for (Union union : this) {
+            float shift = union.alignUnderOrigins(false);
+            if (shift != 0) {
+                union.setX(union.x + shift);
+            }
+        }
+        resolveOverlap(); // Sometimes is necessary
+    }
+
     public void placeYouths() {
         for (Union union : this) {
             for (Node node : union.list) {

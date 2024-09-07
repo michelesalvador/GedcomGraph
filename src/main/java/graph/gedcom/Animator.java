@@ -293,19 +293,28 @@ public class Animator {
         }
 
         // Outdistances ancestor unions and descendant nodes row by row, reducing lines overlap
-        float count = 20;
+        int count = 30;
         float forces = Float.MAX_VALUE;
         while (count > 0 && Math.abs(forces) > 1) {
             for (Node node : nodes) {
                 node.force = 0;
             }
             outdistanceDescendants();
-            outdistanceAncestors();
+            // Horizontaly aligns ancestor unions under their origins and over their youth (at the same time)
+            for (int r = 0; r < maxAbove - 1; r++) { // From first row down until generation -2 included
+                                                     // (from above or from below it makes no difference)
+                unionRows.get(r).alignToEverything();
+            }
             forces = 0;
             for (Node node : nodes) {
                 forces += node.force;
             }
             count--;
+        }
+
+        // Eventually places some union below their origins to reduce line overlap
+        for (int r = 1; r < maxAbove - 1; r++) { // From second row down until generation -2 included
+            unionRows.get(r).alignUnderOrigins();
         }
 
         // Horizontally places acquired mini ancestry and all mini progeny
@@ -362,48 +371,6 @@ public class Animator {
 
         distributeLines(lines, lineRows, lineGroups);
         distributeLines(backLines, backLineRows, backLineGroups);
-    }
-
-    void outdistanceAncestors() {
-        // Horizontaly align unions to youth, whether is enough space around
-        for (int r = maxAbove; r >= 0; r--) { // Start from fulcrum generation up
-            for (Union union : unionRows.get(r)) {
-                if (union.ancestor != null // Cousins excluded
-                        && union.ancestor.youth != null && !union.ancestor.youth.mini) {
-                    union.updateX(); // Necessary
-                    union.setX(union.x + union.spaceAround());
-                }
-            }
-        }
-        // Place unions below origins to reduce lines overlap
-        for (int r = 0; r < maxAbove - 1; r++) { // From top down until generation -2 included
-            UnionRow unionRow = unionRows.get(r);
-            for (Union union : unionRow) {
-                List<Node> origins = union.getOrigins();
-                if (origins.size() > 1) {
-                    float male = union.ancestor.getPartner(0).centerX();
-                    float female = union.ancestor.getPartner(1).centerX();
-                    float origin1 = origins.get(0).centerX();
-                    float origin2 = origins.get(1).centerX();
-                    if ((male < origin1) || (female > origin2)) {
-                        union.updateX();
-                        float shift = origin1 + (origin2 - origin1) / 2 - union.centerRelX();
-                        union.setX(shift);
-                    }
-                }
-            }
-            unionRow.resolveOverlap();
-        }
-        // Align progenitors (those without ancestors, or with mini ancestors)
-        for (int r = maxAbove - 1; r >= 0; r--) { // Starting from generation -1 and going up
-            for (Union union : unionRows.get(r)) {
-                // Strange, but there are crash reports of null youth
-                if (!union.ancestor.hasOrigins() && union.ancestor.youth != null) {
-                    union.updateX(); // Necessary
-                    union.setX(union.x + union.spaceAround());
-                }
-            }
-        }
     }
 
     void outdistanceDescendants() {

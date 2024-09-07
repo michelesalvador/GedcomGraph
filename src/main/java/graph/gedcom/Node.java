@@ -23,7 +23,7 @@ public abstract class Node extends Metric {
     public Family spouseFamily; // The person in this node is spouse of this family
     List<Person> children; // Children of one or many families of PersonNode or of a FamilyNode
     // List of siblings to which this node belongs
-    // Warning: an ancestor node can belong at the same time to 2 groups, making this 'group' useless
+    // Warning: an ancestor node can belong at the same time to 2 groups, making this 'group' quite useless
     Group group;
     Group youth; // List of PersonNode and FamilyNode descendants of a PersonNode or of a FamilyNode
     public int generation; // Number of the generation to which this node belongs (0 for fulcrum, negative up and positive down)

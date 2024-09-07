@@ -64,8 +64,10 @@ public class Union extends Metric {
         return false;
     }
 
-    // Find the left or right space to move respect youth center
-    float spaceAround() {
+    /**
+     * Finds the left or right space to move this union respect youth center.
+     */
+    float alignOverYouth() {
         ancestor.youth.updateX();
         float distance = ancestor.youth.centerX() - centerX();
         if (distance < 0) { // Could move to the left
@@ -82,6 +84,34 @@ public class Union extends Metric {
                 return Math.min(right, distance);
             } else
                 return distance;
+        }
+        return 0;
+    }
+
+    /**
+     * Checks if this union can be aligned under a couple of ancestors to reduce lines overlap.
+     * @param permissive True requests to apply in all cases, false only if lines are actually overlapping
+     * @return The distance to move the union
+     */
+    public float alignUnderOrigins(boolean permissive) {
+        List<Node> origins = getOrigins();
+        if (origins.size() > 1) {
+            Node firstOrigin = origins.get(0);
+            Node secondOrigin = origins.get(1);
+            float origin1X = firstOrigin.centerX();
+            float origin2X = secondOrigin.centerX();
+            updateX();
+            if (origin1X + (origin2X - origin1X) / 2 < centerX()) { // Moving to the left
+                float shift = origin2X - secondOrigin.youth.centerX();
+                if (shift < 0 && (permissive || ancestor.centerX() > origin2X)) { // Lines are actually overlapping
+                    return shift;
+                }
+            } else { // Moving to the right
+                float shift = origin1X - firstOrigin.youth.centerX();
+                if (shift > 0 && (permissive || ancestor.centerX() < origin1X)) { // Lines are actually overlapping
+                    return shift;
+                }
+            }
         }
         return 0;
     }

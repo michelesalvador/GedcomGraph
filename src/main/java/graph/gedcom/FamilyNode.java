@@ -48,7 +48,7 @@ public class FamilyNode extends Node {
     List<Node> getOrigins() {
         List<Node> origins = new ArrayList<>();
         for (PersonNode partner : partners) {
-            if (partner.origin != null)
+            if (partner.origin != null && !partner.origin.mini)
                 origins.add(partner.origin);
         }
         return origins;
