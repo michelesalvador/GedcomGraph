@@ -201,13 +201,13 @@ public class Animator {
                                 break find;
                             }
                         }
-                        union = new Union();
+                        union = new Union(node.generation);
                         union.ancestor = node;
                         break;
                     }
                 }
                 if (union == null) { // Union without ancestor
-                    union = new Union();
+                    union = new Union(group.generation);
                 }
                 // Add the group to the union
                 if (joinExistingGroup) { // Already populated union
@@ -222,8 +222,7 @@ public class Animator {
                 }
                 for (Node node : union.list) { // TODO A ben guardare cicla 2 volte in metà della stessa union
                     node.union = union;
-                    // Exceptionally also fulcrum family/person node will be putted in
-                    // union.ancestor
+                    // Exceptionally also fulcrum family/person node will be putted in union.ancestor
                     PersonNode main = node.getMainPersonNode();
                     if (main != null && main.isFulcrumNode())
                         union.ancestor = node;
@@ -231,9 +230,25 @@ public class Animator {
             }
         }
 
-        // Find the central node of each union row
-        for (UnionRow row : unionRows) {
-            row.findCentralNode();
+        // Initializes stuff for each union (row)
+        for (UnionRow unionRow : unionRows) {
+            // Finds the central node
+            unionRow.findCentralNode();
+            // Prev and next union
+            Union previous = null;
+            for (Union union : unionRow) {
+                union.prev = previous;
+                if (union.prev != null)
+                    union.prev.next = union;
+                previous = union;
+                // Other stuff
+                union.initializeDescendants();
+                union.initializeYouths();
+            }
+        }
+
+        for (Node node : nodes) {
+            node.initializeOrigins();
         }
     }
 
@@ -273,37 +288,42 @@ public class Animator {
 
         // The fulcrum family could be the only one and needs to be placed
         if (maxAbove == 0 && fulcrumNode.familyNode != null) {
-            fulcrumNode.familyNode.setX(0);
+            fulcrumNode.familyNode.group.placeNodes(0);
+        }
+
+        // Ascends generations disposing ancestors and uncles, starting from from fulcrum generation up
+        for (int r = maxAbove; r >= 0; r--) {
+            groupRows.get(r).placeAncestors();
         }
 
         // Positions the descendants starting from generation -1 (if existing) or from fulcrum generation down
-        int start = Math.max(0, maxAbove - 1);
-        for (int r = start; r < unionRows.size(); r++) {
-            UnionRow unionRow = unionRows.get(r);
-            unionRow.resolveOverlap();
-            unionRow.placeYouths();
+        for (int r = Math.max(0, maxAbove - 1); r < unionRows.size(); r++) {
+            unionRows.get(r).placeYouths();
         }
 
-        // Ascends generations resolving overlaps and disposing ancestors and uncles
-        // starting from generation -1 (if exists) or from fulcrum generation up
-        for (int r = start; r >= 0; r--) {
-            GroupRow groupRow = groupRows.get(r);
-            groupRow.resolveOverlap();
-            groupRow.placeAncestors();
+        // Separates couples of overlapping ancestors
+        for (int r = maxAbove - 1; r >= 0; r--) {
+            unionRows.get(r).placeOriginsAscending();
         }
 
-        // Outdistances ancestor unions and descendant nodes row by row, reducing lines overlap
-        int count = 30;
+        // Outdistances ancestor unions and descendants nodes optimizing horizontal position
+        int count = 100;
         float forces = Float.MAX_VALUE;
         while (count > 0 && Math.abs(forces) > 1) {
             for (Node node : nodes) {
                 node.force = 0;
             }
-            outdistanceDescendants();
-            // Horizontaly aligns ancestor unions under their origins and over their youth (at the same time)
-            for (int r = 0; r < maxAbove - 1; r++) { // From first row down until generation -2 included
-                                                     // (from above or from below it makes no difference)
-                unionRows.get(r).alignToEverything();
+            for (int r = maxAbove - 1; r >= 0; r--) {
+                unionRows.get(r).outdistanceAncestorColumns();
+            }
+            // Aligns each ancestor between origins
+            for (int r = maxAbove - 2; r >= 0; r--) {
+                for (Union union : unionRows.get(r)) {
+                    union.setX(union.x + union.alignBetweenOrigins());
+                }
+            }
+            for (int r = Math.max(0, maxAbove - 1); r < unionRows.size(); r++) {
+                unionRows.get(r).outdistanceDescendantColumns();
             }
             forces = 0;
             for (Node node : nodes) {
@@ -312,24 +332,22 @@ public class Animator {
             count--;
         }
 
-        // Eventually places some union below their origins to reduce line overlap
-        for (int r = 1; r < maxAbove - 1; r++) { // From second row down until generation -2 included
-            unionRows.get(r).alignUnderOrigins();
+        // Just in case removes final overlaps in all rows
+        for (UnionRow unionRow : unionRows) {
+            unionRow.resolveOverlap();
         }
 
-        // Horizontally places acquired mini ancestry and all mini progeny
+        // Fixes horizontal misalignment between parents (generation -1) and grandparents (generation -2)
+        if (maxAbove > 0) {
+            Union parentUnion = unionRows.get(maxAbove - 1).get(0);
+            parentUnion.moveDescending(parentUnion.alignBetweenOrigins());
+        }
+
+        // Eventually places horizontally mini ancestry and mini progeny
         for (Node node : nodes) {
+            node.alignMiniEmptyOverYouth();
             node.placeAcquiredOriginX();
             node.placeMiniChildrenX();
-        }
-
-        // Horizontally places mini origins and origins without ancestors
-        for (int r = 0; r < maxAbove; r++) {
-            GroupRow groupRow = groupRows.get(r);
-            for (Group group : groupRow) {
-                if (group.isOriginMiniOrEmpty())
-                    group.placeOriginX();
-            }
         }
 
         // Finds the diagram margins to fit exactly around every node
@@ -371,47 +389,6 @@ public class Animator {
 
         distributeLines(lines, lineRows, lineGroups);
         distributeLines(backLines, backLineRows, backLineGroups);
-    }
-
-    void outdistanceDescendants() {
-        // Horizontally align groups of this row (having enough space) below origin
-        for (int r = maxAbove; r < groupRows.size(); r++) { // Start from fulcrum row down
-            for (Group group : groupRows.get(r)) {
-                if (group.origin != null) {
-                    group.updateX();
-                    group.setX(group.x + group.spaceAround());
-                }
-            }
-        }
-        // Align horizontally each node to its youth
-        // From bottom up to fulcrum row or generation -1 if exists
-        for (int r = unionRows.size() - 1; r >= (maxAbove > 0 ? maxAbove - 1 : 0); r--) {
-            UnionRow unionRow = unionRows.get(r);
-            for (Union union : unionRow) {
-                for (Node node : union.list) {
-                    Group youth = node.youth;
-                    if (youth != null && !youth.mini) {
-                        youth.updateX();
-                        float distance = youth.centerX() - node.centerX();
-                        if (distance != 0) {
-                            node.setX(node.x + distance);
-                        }
-                    }
-                }
-                union.distributeSiblings();
-            }
-            unionRow.resolveOverlap();
-        }
-        // Horizontally align final (without youths) groups of each row (having enough
-        // space) below origin
-        for (int r = maxAbove; r < groupRows.size(); r++) { // From fulcrum row down
-            for (Group group : groupRows.get(r)) {
-                if (!group.hasChildren() && group.origin != null) {
-                    group.updateX();
-                    group.setX(group.x + group.spaceAround());
-                }
-            }
-        }
     }
 
     private void distributeLines(List<Line> lines, List<LineRow> lineRows, List<Set<Line>> lineGroups) {

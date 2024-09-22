@@ -9,7 +9,7 @@ public class Util {
     public static int VERTICAL_SPACE = 90; // Vertical space between rows of nodes
     public static int VERTICAL_SPACE_CALC; // Same resized on displayNumbers
     public static int HORIZONTAL_SPACE = 15; // Horizontal space between nodes of the same group
-    public static int UNION_DISTANCE = 50; // Horizontal space between unions of the same row
+    public static int UNION_DISTANCE = 40; // Horizontal space between unions of the same row
 
     public static int BOND_WIDTH = 23; // Horizontal distance between partners with no marriage oval
     public static int MINI_BOND_WIDTH = 18; // Horizontal space between ancestry husband and wife
@@ -160,12 +160,12 @@ public class Util {
             if (!person.getNames().isEmpty()) {
                 Name name = person.getNames().get(0);
                 str += name.getDisplayValue().replaceAll("/", "");
-                if (name.getNickname() != null)
-                    str += " \"" + name.getNickname() + "\"";
+                // if (name.getNickname() != null) str += " \"" + name.getNickname() + "\"";
             }
             // str += " " + person.hashCode();
         }
-        // if( str.length() > 1 ) str = str.substring(0, 1);
+        // if (str.length() > 10) str = str.substring(0, 10);
+        if (str.isBlank()) str = "[No name]";
         return str;
     }
 

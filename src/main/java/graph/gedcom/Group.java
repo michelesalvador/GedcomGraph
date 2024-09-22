@@ -3,7 +3,6 @@ package graph.gedcom;
 import static graph.gedcom.Util.ANCESTRY_DISTANCE;
 import static graph.gedcom.Util.HORIZONTAL_SPACE;
 import static graph.gedcom.Util.LITTLE_GROUP_DISTANCE_CALC;
-import static graph.gedcom.Util.UNION_DISTANCE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -82,18 +81,13 @@ public class Group extends Metric {
         return false;
     }
 
-    // Nodes of this group have some child (not mini)
-    public boolean hasChildren() {
-        for (Node node : list) {
-            if (node.youth != null && !node.youth.mini) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // If this group is a multimarriage only (without any sibling) returns the NEAR person node, otherwise returns null.
+    /**
+     * If this group is a multimarriage only (without any sibling) returns the NEAR person node, otherwise returns null.
+     */
     private Node getStallion() {
+        if (origin != null && origin.children.size() > 1) { // Stallion is a single child of origin
+            return null;
+        }
         Node nearNode = null;
         for (Node node : list) {
             if (!node.isMultiMarriage(branch))
@@ -104,7 +98,35 @@ public class Group extends Metric {
         return nearNode;
     }
 
-    // Places origin and uncles
+    /**
+     * Horizontally distributes nodes of this group centered to centerX.
+     */
+    public void placeNodes(float centerX) {
+        // Place stallion child and their spouses
+        if (stallion != null) {
+            stallion.setX(centerX - stallion.getLeftWidth(null));
+            Node right = stallion;
+            while (right.next != null && right.next.group == this) {
+                right.next.setX(right.x + right.width + HORIZONTAL_SPACE);
+                right = right.next;
+            }
+            Node left = stallion;
+            while (left.prev != null && left.prev.group == this) {
+                left.prev.setX(left.x - HORIZONTAL_SPACE - left.prev.width);
+                left = left.prev;
+            }
+        } else { // Place normal youth
+            float posX = centerX - getBasicLeftWidth() - getBasicCentralWidth() / 2;
+            for (Node child : list) {
+                child.setX(posX);
+                posX += child.width + HORIZONTAL_SPACE;
+            }
+        }
+    }
+
+    /**
+     * Places horizontaly origin and uncles above this group.
+     */
     public void placeAncestors() {
         if (origin != null) {
             placeOriginX();
@@ -128,7 +150,9 @@ public class Group extends Metric {
         }
     }
 
-    // Places horizontally the origin centered to this group nodes
+    /**
+     * Places horizontally the origin centered to this group nodes.
+     */
     void placeOriginX() {
         if (stallion != null)
             origin.setX(stallion.x + stallion.getLeftWidth(branch) - origin.centerRelX());
@@ -138,33 +162,21 @@ public class Group extends Metric {
         }
     }
 
-    // Places mini origin or regular origin without partners
-    // Different distance whether this group has one node or multiple nodes
+    /**
+     * Places mini origin or regular origin without partners. Different distance whether this group has one node or multiple nodes.
+     */
     void placeOriginY() {
         origin.setY(y - (list.size() > 1 && stallion == null ? LITTLE_GROUP_DISTANCE_CALC : ANCESTRY_DISTANCE) - origin.height);
     }
 
-    // How much this descendant group can move to the left (negative) or to the right (positive) respect origin center
-    float spaceAround() {
-        float distance = origin.centerX() - centerX();
-        if (distance < 0) { // Want move to the left
-            // p("\t", generation, origin.centerX(), centerX(), distance, this, origin);
-            Node prev = list.get(0).prev;
-            if (prev != null) {
-                float left = Math.min(0, prev.x + prev.width + UNION_DISTANCE - x); // Can't be positive
-                return Math.max(left, distance);
-            } else
-                return distance;
-        } else if (distance > 0) { // Want move to the right
-            // p("\t", generation,origin.centerX(), centerX(), distance, this, origin);
-            Node next = list.get(list.size() - 1).next;
-            if (next != null) {
-                float right = Math.max(0, next.x - x - getWidth() - UNION_DISTANCE); // Can't be negative
-                return Math.min(right, distance);
-            } else
-                return distance;
+    void moveDescending(float shift) {
+        updateX();
+        setX(x + shift);
+        for (Node node : list) {
+            if (node.youth != null) {
+                node.youth.moveDescending(shift);
+            }
         }
-        return 0;
     }
 
     // Excluded acquired spouses at right

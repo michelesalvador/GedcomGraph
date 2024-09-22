@@ -34,6 +34,7 @@ public abstract class Node extends Metric {
     // List of the relationship positions.
     // When there are 2 ancestors, match 0 is for husband (right branch MATER) and match 1 is for wife (left branch PATER).
     List<Match> matches;
+    List<Node> origins; // Ordered chain of origins up until generation -1
     float force;
 
     Node() {
@@ -52,50 +53,39 @@ public abstract class Node extends Metric {
      */
     abstract float simpleCenterX();
 
-    // Horizontally distribute progeny nodes
-    void placeYouthX() {
-        // Place stallion child and their spouses
-        if (youth.stallion != null) {
-            youth.stallion.setX(centerX() - youth.stallion.getLeftWidth(null));
-            Node right = youth.stallion;
-            while (right.next != null) {
-                right.next.setX(right.x + right.width + HORIZONTAL_SPACE);
-                right = right.next;
-            }
-            Node left = youth.stallion;
-            while (left.prev != null) {
-                left.prev.setX(left.x - HORIZONTAL_SPACE - left.prev.width);
-                left = left.prev;
-            }
-        } else { // Place normal youth
-            float posX = centerX() - youth.getBasicLeftWidth() - youth.getBasicCentralWidth() / 2;
+    /**
+     * Shifts horizontally this node propagating shift on descendants.
+     */
+    void moveDescending(float shift) {
+        setX(x + shift);
+        if (youth != null) {
             for (Node child : youth.list) {
-                child.setX(posX);
-                posX += child.width + HORIZONTAL_SPACE;
+                child.moveDescending(shift);
             }
         }
     }
 
-    // Horizontally distribute mini progeny nodes
+    /**
+     * Horizontally distributes progeny nodes.
+     */
+    void placeYouthX() {
+        if (youth != null && !youth.mini) { // Existing regular children only
+            youth.placeNodes(centerX());
+        }
+    }
+
+    /**
+     * Horizontally distributes mini progeny nodes.
+     */
     void placeMiniChildrenX() {
         if (youth != null && youth.mini) {
-            float posX = 0;
+            float posX = centerX();
             for (Node child : youth.list) {
-                child.setX(posX);
+                child.x = posX;
                 posX += child.width + PROGENY_PLAY;
             }
-            youth.setX(centerX() - youth.getWidth() / 2);
-        }
-    }
-
-    // Horizontally update mini progeny position
-    void setMiniChildrenX() {
-        if (youth != null && youth.mini) {
-            float posX = centerX() - youth.width / 2;
-            for (Node child : youth.list) {
-                child.setX(posX);
-                posX += child.width + PROGENY_PLAY;
-            }
+            youth.updateX();
+            youth.setX(youth.x - youth.getWidth() / 2);
         }
     }
 
@@ -120,13 +110,44 @@ public abstract class Node extends Metric {
         }
     }
 
+    /**
+     * Horizontally aligns this mini or empty node over youth.
+     */
+    void alignMiniEmptyOverYouth() {
+        if (youth != null && youth.isOriginMiniOrEmpty()) {
+            youth.updateX();
+            setX(youth.centerX() - centerRelX());
+        }
+    }
+
+    /**
+     * Applies the shift to this node and propagates the overlap correction to previous or next node.
+     */
+    void slide(float shift) {
+        setX(x + shift);
+        if (shift > 0 && next != null) {
+            float rightOver = x + width + (union.equals(next.union) ? HORIZONTAL_SPACE : UNION_DISTANCE) - next.x;
+            if (rightOver > 0)
+                next.slide(rightOver);
+        } else if (shift < 0 && prev != null) {
+            float leftOver = prev.x + prev.width + (union.equals(prev.union) ? HORIZONTAL_SPACE : UNION_DISTANCE) - x;
+            if (leftOver > 0)
+                prev.slide(-leftOver);
+        }
+    }
+
     // Hybrid methods for FamilyNode and PersonNode
 
     abstract Node getOrigin();
 
-    // A list with zero, one or two origin nodes
+    /**
+     * Returns a list with zero, one or more origin nodes. Excluded mini and empty origins.
+     */
     abstract List<Node> getOrigins();
 
+    /**
+     * This node has at least one regular origin.
+     */
     abstract boolean hasOrigins();
 
     abstract FamilyNode getFamilyNode();
@@ -158,17 +179,57 @@ public abstract class Node extends Metric {
         return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
     }
 
-    // Apply the overlap correction and propagate it to previous or next nodes
-    void shift(float run) {
-        setX(x + run);
-        if (run > 0 && next != null) {
-            float rightOver = x + width + (union.equals(next.union) ? HORIZONTAL_SPACE : UNION_DISTANCE) - next.x;
-            if (rightOver > 0)
-                next.shift(rightOver);
-        } else if (run < 0 && prev != null) {
-            float leftOver = prev.x + prev.width + (union.equals(prev.union) ? HORIZONTAL_SPACE : UNION_DISTANCE) - x;
-            if (leftOver > 0)
-                prev.shift(-leftOver);
+    /**
+     * Populates origins list.
+     */
+    public void initializeOrigins() {
+        if (generation >= -1 && !mini) {
+            origins = new ArrayList<>();
+            Node node = this;
+            while (node != null && node.generation >= 0) {
+                node = node.group.origin;
+                if (node != null && !node.mini)
+                    origins.add(node);
+            }
+        }
+    }
+
+    float columnShift; // How much to shift horizontally this node and its descendants
+
+    /**
+     * Starts from this capital node to move horizontally the descendants column.
+     */
+    void outdistanceDescendantColumn() {
+        if (youth != null && !youth.mini) { // Node with regular descendants
+            columnShift = 0;
+            // This node itself
+            if (prev != null && union.equals(prev.union)) {
+                columnShift = prev.x + prev.width + HORIZONTAL_SPACE - x;
+            }
+            findDescendantColumnShift(this);
+            if (columnShift != 0) {
+                moveDescending(columnShift);
+            }
+        }
+    }
+
+    /**
+     * Searches correct shift (positive or negative) in descendants of the same column. Recursive call.
+     *
+     * @param node The actual node to investigate the youth left overlap
+     */
+    private void findDescendantColumnShift(Node node) {
+        if (node.youth != null && !node.youth.mini) { // Node with regular descendants
+            Node first = node.youth.list.get(0);
+            if (first.prev != null && !first.prev.origins.contains(this)) {
+                float leftShift = first.prev.x + first.prev.width + UNION_DISTANCE - first.x; // Positive overlap or negative distance
+                if (leftShift > columnShift) {
+                    columnShift = leftShift;
+                }
+            }
+            for (Node youthNode : node.youth.list) {
+                findDescendantColumnShift(youthNode);
+            }
         }
     }
 }

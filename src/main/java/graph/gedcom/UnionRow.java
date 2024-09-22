@@ -24,7 +24,9 @@ public class UnionRow extends ArrayList<Union> {
         add(union);
     }
 
-    // Find central node of the row, for the benefit of resolveOverlap()
+    /**
+     * Finds central node of the row, for the benefit of resolveOverlap() and maybe others.
+     */
     void findCentralNode() {
         if (generation == -1) {
             central = get(0).ancestor; // Parents union is always the only one of the row
@@ -43,7 +45,7 @@ public class UnionRow extends ArrayList<Union> {
             float gap = left.union.equals(left.prev.union) ? HORIZONTAL_SPACE : UNION_DISTANCE;
             float overlap = left.prev.x + left.prev.width + gap - left.x;
             if (overlap > 0)
-                left.prev.shift(-overlap);
+                left.prev.slide(-overlap);
             left = left.prev;
         }
         Node right = central;
@@ -51,55 +53,45 @@ public class UnionRow extends ArrayList<Union> {
             float gap = right.union.equals(right.next.union) ? HORIZONTAL_SPACE : UNION_DISTANCE;
             float overlap = right.x + right.width + gap - right.next.x;
             if (overlap > 0)
-                right.next.shift(overlap);
+                right.next.slide(overlap);
             right = right.next;
         }
     }
 
     /**
-     * Horizontaly aligns ancestor unions both to origins and to youth, starting from central union. To be called many times.
+     * Separates each couple of ancestor unions resolving their overlap only.
      */
-    void alignToEverything() {
-        // Probably could be done in a simple single loop
-        int center = indexOf(central.union);
-        for (int i = center; i >= 0; i--) {
-            completeAlignToEverything(i);
-        }
-        for (int i = center + 1; i < size(); i++) {
-            completeAlignToEverything(i);
-        }
-        resolveOverlap();
-    }
-
-    private void completeAlignToEverything(int i) {
-        Union union = get(i);
-        union.updateX(); // Necessary
-        float shift = union.alignOverYouth() + union.alignUnderOrigins(true);
-        if (shift != 0) {
-            union.setX(union.x + shift / 2); // An average of the two values
+    void placeOriginsAscending() {
+        for (Union union : this) {
+            union.placeOriginsAscending();
         }
     }
 
     /**
-     * Final alignement of unions under double origins to remove lines overlap. To be called once.
+     * Shifts horizontally ancestors resolving overlap and also compacting excessive space.
      */
-    void alignUnderOrigins() {
+    void outdistanceAncestorColumns() {
         for (Union union : this) {
-            float shift = union.alignUnderOrigins(false);
-            if (shift != 0) {
-                union.setX(union.x + shift);
-            }
+            union.outdistanceAncestorColumn();
         }
-        resolveOverlap(); // Sometimes is necessary
     }
 
-    public void placeYouths() {
+    /**
+     * Shifts horizontally descendants resolving overlap and also compacting excessive space.
+     */
+    void outdistanceDescendantColumns() {
         for (Union union : this) {
             for (Node node : union.list) {
-                Group youth = node.youth;
-                if (youth != null && !youth.mini) { // Existing regular children only
-                    node.placeYouthX();
-                }
+                node.outdistanceDescendantColumn();
+            }
+            union.distributeNodesOverYouth();
+        }
+    }
+
+    void placeYouths() {
+        for (Union union : this) {
+            for (Node node : union.list) {
+                node.placeYouthX();
             }
         }
     }

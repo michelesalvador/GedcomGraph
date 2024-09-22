@@ -16,13 +16,20 @@ import java.util.List;
 public class Union extends Metric {
 
     List<Node> list; // List of PersonNodes and FamilyNodes that move horizontally together
+    int generation;
     Node ancestor; // The ancestor node of fulcrum, or fulcrum itself FamilyNode/PersonNode. Null for cousins and descendants.
+    Union prev, next; // Previous and next union on the same row (same generation)
+    List<Union> descendants; // List of unions descendant of this one, especially for ancestor unions down until generation -1
+    List<Group> youths; // Youths belonging to this union, especially for descendant union
 
-    Union() {
+    Union(int generation) {
         list = new ArrayList<>();
+        this.generation = generation;
     }
 
-    // For ancestors where there are multiple origins
+    /**
+     * For ancestors where there are multiple origins.
+     */
     List<Node> getOrigins() {
         if (ancestor != null)
             return ancestor.getOrigins();
@@ -33,87 +40,164 @@ public class Union extends Metric {
         x = list.get(0).x;
     }
 
-    // Distributes horizontaly the nodes in between their siblings and position the extreme nodes.
-    // Valid for descendants only (from -1 generation included down).
-    void distributeSiblings() {
-        if (hasChildren()) { // This union has some child
-            for (int i = 0; i < list.size(); i++) {
-                Node node = list.get(i);
-                if (node.youth == null) { // The node has no children
-                    // Put the node in the middle of prev and next
-                    if (node.prev != null && node.prev.union.equals(this) && node.next != null && node.next.union.equals(this)) {
-                        float space = node.next.x - node.prev.x - node.prev.width - node.width;
-                        node.setX(node.prev.x + node.prev.width + space / 2);
-                    } // First node of union
-                    else if (i == 0 && node.next != null) {
-                        node.setX(node.next.x - node.width - HORIZONTAL_SPACE);
-                    } // Last node of union
-                    else if (i == list.size() - 1 && node.prev != null) {
-                        node.setX(node.prev.x + node.prev.width + HORIZONTAL_SPACE);
-                    }
-                }
+    /**
+     * Populates the list of unions descendant of this union, until generation -1 included.
+     */
+    public void initializeDescendants() {
+        if (generation < 0) {
+            descendants = new ArrayList<>();
+            Union union = this;
+            while (union.generation < -1) {
+                union = union.ancestor.youth.list.get(0).union;
+                descendants.add(union);
             }
         }
     }
 
-    boolean hasChildren() {
+    /**
+     * Populates youths list for this union. To be called once.
+     */
+    public void initializeYouths() {
+        youths = new ArrayList<>();
         for (Node node : list) {
             if (node.youth != null && !node.youth.mini)
-                return true;
+                youths.add(node.youth);
         }
-        return false;
     }
 
     /**
-     * Finds the left or right space to move this union respect youth center.
+     * Removes overlap between two origin unions and propagates the shift on above ancestors.
      */
-    float alignOverYouth() {
-        ancestor.youth.updateX();
-        float distance = ancestor.youth.centerX() - centerX();
-        if (distance < 0) { // Could move to the left
-            Node prev = list.get(0).prev;
-            if (prev != null) {
-                float left = prev.x + prev.width + UNION_DISTANCE - x;
-                return Math.max(left, distance);
-            } else
-                return distance;
-        } else if (distance > 0) { // Could move to the right
-            Node next = list.get(list.size() - 1).next;
-            if (next != null) {
-                float right = next.x - x - getWidth() - UNION_DISTANCE;
-                return Math.min(right, distance);
-            } else
-                return distance;
+    void placeOriginsAscending() {
+        List<Node> origins = getOrigins();
+        if (origins.size() > 1) {
+            Union leftUnion = origins.get(0).union;
+            Union rightUnion = origins.get(1).union;
+            leftUnion.updateX();
+            rightUnion.updateX();
+            float overlap = leftUnion.x + leftUnion.getWidth() + UNION_DISTANCE - rightUnion.x;
+            if (overlap > 0) {
+                leftUnion.moveAscending(-overlap / 2);
+                rightUnion.moveAscending(overlap / 2);
+            }
         }
-        return 0;
+    }
+
+    void moveAscending(float shift) {
+        updateX();
+        setX(x + shift);
+        if (ancestor != null) { // First cousin does not have ancestor
+            for (Node origin : ancestor.getOrigins()) {
+                origin.union.moveAscending(shift);
+            }
+        }
+    }
+
+    void moveDescending(float shift) {
+        setX(x + shift);
+        for (Node node : list) {
+            if (node.youth != null) { // TODO && !node.youth.mini ?
+                node.youth.moveDescending(shift);
+            }
+        }
+    }
+
+    float columnShift;
+
+    /**
+     * Shifts horizontally the ancestor column starting from this basement union.
+     */
+    void outdistanceAncestorColumn() {
+        columnShift = 0;
+        // Finds shift for this union itself with previous union, ancestors of the same descendant but distant enough
+        ancestor.youth.updateX(); // Useful
+        float youthDistance = centerX() - ancestor.youth.centerX();
+        if (prev != null && prev.descendants.get(0).equals(descendants.get(0)) && youthDistance > 1) { // youthDistance may have a micro error
+            columnShift = prev.x + prev.getWidth() + UNION_DISTANCE - x; // Positive overlap or negative distance
+        }
+        findAncestorColumnShift(ancestor);
+        if (columnShift != 0) {
+            moveAscending(columnShift);
+        }
     }
 
     /**
-     * Checks if this union can be aligned under a couple of ancestors to reduce lines overlap.
-     * @param permissive True requests to apply in all cases, false only if lines are actually overlapping
-     * @return The distance to move the union
+     * Recursive method to find the maximum shift to move the union column.
      */
-    public float alignUnderOrigins(boolean permissive) {
+    private void findAncestorColumnShift(Node node) {
+        for (Node origin : node.getOrigins()) {
+            Union prev = origin.union.prev;
+            if (prev != null && !prev.descendants.contains(this)) {
+                float leftShift = prev.x + prev.getWidth() + UNION_DISTANCE - origin.union.x; // Positive overlap or negative distance
+                if (leftShift > columnShift) {
+                    columnShift = leftShift;
+                }
+            }
+            findAncestorColumnShift(origin);
+        }
+    }
+
+    /**
+     * Returns the shift necessary to align this union exactly between the two origins or under a single origin.
+     */
+    float alignBetweenOrigins() {
         List<Node> origins = getOrigins();
         if (origins.size() > 1) {
             Node firstOrigin = origins.get(0);
             Node secondOrigin = origins.get(1);
             float origin1X = firstOrigin.centerX();
             float origin2X = secondOrigin.centerX();
-            updateX();
-            if (origin1X + (origin2X - origin1X) / 2 < centerX()) { // Moving to the left
-                float shift = origin2X - secondOrigin.youth.centerX();
-                if (shift < 0 && (permissive || ancestor.centerX() > origin2X)) { // Lines are actually overlapping
-                    return shift;
-                }
-            } else { // Moving to the right
-                float shift = origin1X - firstOrigin.youth.centerX();
-                if (shift > 0 && (permissive || ancestor.centerX() < origin1X)) { // Lines are actually overlapping
-                    return shift;
-                }
+            updateX(); // Necessary
+            firstOrigin.youth.updateX();
+            secondOrigin.youth.updateX();
+            float youthsDistance = secondOrigin.youth.centerX() - firstOrigin.youth.centerX();
+            float discrepance = origin2X - origin1X - youthsDistance;
+            return origin1X - firstOrigin.youth.centerRelX() - x + discrepance / 2;
+        } else if (origins.size() > 0) {
+            Node origin = origins.get(0);
+            if (origin.union != null) {
+                updateX();
+                origin.youth.updateX();
+                return origin.centerX() - origin.youth.centerX();
             }
         }
         return 0;
+    }
+
+    /**
+     * Places horizontally nodes above their youth and distributes remaining nodes at extremes and in the middle of union.
+     */
+    void distributeNodesOverYouth() {
+        if (!youths.isEmpty()) {
+            // Places nodes over youths
+            for (Group youth : youths) {
+                youth.updateX();
+                youth.origin.setX(youth.centerX() - youth.origin.centerRelX());
+            }
+            // Left nodes
+            Node node = youths.get(0).origin;
+            while (node.prev != null && node.prev.union.equals(this)) {
+                node.prev.setX(node.x - HORIZONTAL_SPACE - node.prev.width);
+                node = node.prev;
+            }
+            // Middle nodes
+            for (int i = 0; i < youths.size() - 1; i++) {
+                Node left = youths.get(i).origin;
+                Node right = youths.get(i + 1).origin;
+                node = left.next;
+                while (!node.equals(right)) {
+                    float space = node.next.x - node.prev.x - node.prev.width - node.width;
+                    node.setX(node.prev.x + node.prev.width + space / 2);
+                    node = node.next;
+                }
+            }
+            // Right nodes
+            node = youths.get(youths.size() - 1).origin;
+            while (node.next != null && node.next.union.equals(this)) {
+                node.next.setX(node.x + node.width + HORIZONTAL_SPACE);
+                node = node.next;
+            }
+        }
     }
 
     // Excluded spuses at extremes
