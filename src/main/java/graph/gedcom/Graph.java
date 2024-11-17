@@ -1,6 +1,7 @@
 package graph.gedcom;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -551,7 +552,7 @@ public class Graph {
         // Possible family with at least two members
         FamilyNode familyNode = null;
         if ((type == Card.FULCRUM || type == Card.REGULAR) && spouseFamily != null) {
-            List<Person> spouses = getSpouses(spouseFamily);
+            List<Person> spouses = getSpouses(spouseFamily, null);
             if (spouses.size() > 1 && withSpouses) { // Many spouses
                 familyNode = new FamilyNode(spouseFamily, false, Side.NONE, leftToRight);
                 familyNode.generation = generation;
@@ -592,7 +593,7 @@ public class Graph {
         FamilyNode newNode = new FamilyNode(spouseFamily, type == Card.ANCESTRY, Side.NONE, leftToRight);
         newNode.generation = generation;
         if (type == Card.REGULAR || withNumbers) {
-            List<Person> spouses = getSpouses(spouseFamily);
+            List<Person> spouses = getSpouses(spouseFamily, null);
             for (Person spouse : spouses) {
                 PersonNode personNode = new PersonNode(gedcom, spouse, type);
                 personNode.generation = generation;
@@ -623,13 +624,11 @@ public class Graph {
         familyNode.generation = generation;
         familyNode.matches.add(match);
         if (withSpouses) {
-            for (Person partner : getSpouses(spouseFamily)) {
-                if (!partner.equals(excluded)) {
-                    PersonNode personNode = new PersonNode(gedcom, partner, Card.REGULAR);
-                    personNode.generation = generation; // Necessary?
-                    findAcquiredAncestry(personNode);
-                    familyNode.addPartner(personNode);
-                }
+            for (Person partner : getSpouses(spouseFamily, excluded)) {
+                PersonNode personNode = new PersonNode(gedcom, partner, Card.REGULAR);
+                personNode.generation = generation; // Necessary?
+                findAcquiredAncestry(personNode);
+                familyNode.addPartner(personNode);
             }
         }
         familyNode.createBond();
@@ -638,18 +637,33 @@ public class Graph {
     }
 
     /**
-     * @return A list of all spouses in a family alternating husbands and wives
+     * @param excluded When provided, only one person is returned
+     * @return The first one or two husbands and wives of a family, or an empty list
      */
-    List<Person> getSpouses(Family family) {
-        List<Person> persons = new ArrayList<>();
-        for (Person husband : family.getHusbands(gedcom))
-            persons.add(husband);
-        int pos = persons.size() > 0 ? 1 : 0;
-        for (Person wife : family.getWives(gedcom)) {
-            persons.add(pos, wife);
-            pos += (persons.size() > pos + 1) ? 2 : 1;
+    List<Person> getSpouses(Family family, Person excluded) {
+        // Adds spouses
+        List<Person> spouses = new ArrayList<>();
+        if (!family.getHusbandRefs().isEmpty())
+            spouses.add(family.getHusbandRefs().get(0).getPerson(gedcom));
+        if (!family.getWifeRefs().isEmpty())
+            spouses.add(family.getWifeRefs().get(0).getPerson(gedcom));
+        for (int i = 1; i < family.getHusbandRefs().size(); i++)
+            spouses.add(family.getHusbandRefs().get(i).getPerson(gedcom));
+        for (int i = 1; i < family.getWifeRefs().size(); i++)
+            spouses.add(family.getWifeRefs().get(i).getPerson(gedcom));
+        // Removes null and excluded
+        Iterator<Person> iterator = spouses.iterator();
+        while (iterator.hasNext()) {
+            Person person = iterator.next();
+            if (person == null || person.equals(excluded))
+                iterator.remove();
         }
-        return persons;
+        if (spouses.size() > 2)
+            spouses = spouses.subList(0, 2); // Only two persons
+        if (excluded != null && spouses.size() == 2) {
+            spouses = spouses.subList(0, 1); // Only one person
+        }
+        return spouses;
     }
 
     @Override

@@ -109,7 +109,7 @@ public class Union extends Metric {
      */
     void outdistanceAncestorColumn() {
         columnShift = 0;
-        // Finds shift for this union itself with previous union, ancestors of the same descendant but distant enough
+        // Finds how much to shift this union respect previous union
         ancestor.youth.updateX(); // Useful
         float youthDistance = centerX() - ancestor.youth.centerX();
         if (prev != null && prev.descendants.get(0).equals(descendants.get(0)) && youthDistance > 1) { // youthDistance may have a micro error

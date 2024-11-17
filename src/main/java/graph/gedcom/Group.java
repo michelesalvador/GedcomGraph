@@ -268,7 +268,9 @@ public class Group extends Metric {
         return width;
     }
 
-    // Not fixed to-center width of the first SOLE or NEAR node from the left
+    /**
+     * @return The not fixed to-center width of the first SOLE or NEAR node from the left
+     */
     private float getLeftWidth() {
         for (int i = 0; i < list.size(); i++) {
             Node node = list.get(i);
@@ -279,7 +281,9 @@ public class Group extends Metric {
         return 0;
     }
 
-    // Returns the no fixed central width of the group excluding acquired spouses at extremes
+    /**
+     * @return The not fixed central width of the group excluding acquired spouses at extremes
+     */
     float getCentralWidth() {
         float width = 0;
         if (list.size() > 1) {

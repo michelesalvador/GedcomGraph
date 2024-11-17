@@ -286,8 +286,8 @@ public class Animator {
 
         /* Horizontal positioning */
 
-        // The fulcrum family could be the only one and needs to be placed
-        if (maxAbove == 0 && fulcrumNode.familyNode != null) {
+        // Better first arrange the fulcrum group
+        if (fulcrumNode.familyNode != null) {
             fulcrumNode.familyNode.group.placeNodes(0);
         }
 

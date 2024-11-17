@@ -112,7 +112,9 @@ public class PersonNode extends Node {
 
     @Override
     Match getMatch(Branch branch) {
-        return matches.get(0);
+        if (matches.size() > 0)
+            return matches.get(0);
+        return null;
     }
 
     // Recoursive count of direct ancestors

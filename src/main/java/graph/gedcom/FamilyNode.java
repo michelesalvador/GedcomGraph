@@ -216,18 +216,19 @@ public class FamilyNode extends Node {
     @Override
     float getMainWidth(Position pos) {
         float size = 0;
-        int index = partners.indexOf(getMainPersonNode());
+        PersonNode mainPerson = getMainPersonNode();
+        int index = partners.indexOf(mainPerson);
         if (pos == Position.FIRST) {
             if (group.branch == Branch.MATER) {
                 size = getWife().centerRelX();
-            } else if (getMainPersonNode() != null) {
-                size = getMainPersonNode().centerRelX();
-                if (index == 0 && partners.size() > 1) // Is husband
+            } else if (mainPerson != null) {
+                size = mainPerson.centerRelX();
+                if (index == 0 && partners.size() > 1) // Main person is husband
                     size += getBondWidth() + getPartner(1).width;
             }
-        } else if (pos == Position.LAST && getMainPersonNode() != null) {
-            size = getMainPersonNode().centerRelX();
-            if (index > 0) // Is wife
+        } else if (pos == Position.LAST && mainPerson != null) {
+            size = mainPerson.centerRelX();
+            if (index > 0) // Main person is wife
                 size += getPartner(0).width + getBondWidth();
         } else { // The complete width
             size = width;

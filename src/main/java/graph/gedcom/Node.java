@@ -42,10 +42,14 @@ public abstract class Node extends Metric {
         matches = new ArrayList<>();
     }
 
-    // Calculate the initial width of first node (complementar to getMainWidth())
+    /**
+     * Returns the width from left until the middle of the main node, complementar to getMainWidth(Position).
+     */
     abstract float getLeftWidth(Branch branch);
 
-    // Calculate the to-center width of the main node included bond and partner
+    /**
+     * Returns the width relative to the center of main node, included bond and partner.
+     */
     abstract float getMainWidth(Position pos);
 
     /**
@@ -173,7 +177,9 @@ public abstract class Node extends Metric {
 
     abstract Match getMatch(Branch branch);
 
-    // This node is one of the three match: NEAR, MIDDLE or FAR
+    /**
+     * This node is one of the three matches: NEAR, MIDDLE or FAR.
+     */
     boolean isMultiMarriage(Branch branch) {
         Match match = getMatch(branch);
         return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
