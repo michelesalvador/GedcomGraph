@@ -12,8 +12,6 @@ import org.folg.gedcom.model.Person;
 
 import graph.gedcom.Util.Branch;
 import graph.gedcom.Util.Card;
-import graph.gedcom.Util.Match;
-import graph.gedcom.Util.Position;
 
 /**
  * A node representig a single person.
@@ -23,11 +21,13 @@ public class PersonNode extends Node {
     private Gedcom gedcom;
     public Person person;
     public Node origin; // The FamilyNode or PersonNode which this person was born from
+    // public Family parentFamily; // Family in which the person is child TODO implement to replace PersonNode.origin.spouseFamily
     FamilyNode familyNode; // The FamilyNode in which this person is spouse. Null for singles.
     Card type; // Size and function
     public boolean acquired; // Is this person acquired spouse (not blood relative)?
     public boolean dead;
     public int amount; // Number to display in little ancestry or progeny
+    public boolean duplicate; // This person already appeared on the diagram
     boolean isHalfSibling; // This person is a half-sibling of fulcrum
     CurveLine line; // Curve line connecting this person with the origin above
 
@@ -64,13 +64,13 @@ public class PersonNode extends Node {
     }
 
     @Override
-    boolean hasOrigins() {
-        return origin != null && !origin.mini;
+    boolean isDuplicate() {
+        return duplicate;
     }
 
     @Override
-    FamilyNode getFamilyNode() {
-        return familyNode;
+    Node getFamilyNode() {
+        return familyNode != null ? familyNode : this;
     }
 
     @Override
@@ -107,13 +107,6 @@ public class PersonNode extends Node {
             return familyNode.getPartner(id);
         else if (id == 0) // Single person
             return this;
-        return null;
-    }
-
-    @Override
-    Match getMatch(Branch branch) {
-        if (matches.size() > 0)
-            return matches.get(0);
         return null;
     }
 
@@ -158,6 +151,9 @@ public class PersonNode extends Node {
         return false;
     }
 
+    /**
+     * There should be only one fulcrum node.
+     */
     public boolean isFulcrumNode() {
         return type == Card.FULCRUM;
     }
@@ -189,14 +185,6 @@ public class PersonNode extends Node {
     }
 
     @Override
-    float getMainWidth(Position pos) {
-        if (pos == Position.MIDDLE)
-            return width;
-        else
-            return centerRelX();
-    }
-
-    @Override
     float getLeftWidth(Branch branch) {
         return centerRelX();
     }
@@ -209,12 +197,14 @@ public class PersonNode extends Node {
             String txt = "";
             // txt += " " + Math.floor(force);
             // txt += " " + generation;
-            // txt += " " + getMatch();
+            // txt += " " + match;
             txt += " " + essence(person);
             // txt += " *" + origin + "*";
             // txt += " " + person.getId();
             // txt += " " + (group != null ? group : "null"); // Produce stackoverflow
             // txt += " " + (group != null ? group.branch : "group=null");
+            if (duplicate)
+                txt += " (2)";
             return txt.trim();
         }
     }

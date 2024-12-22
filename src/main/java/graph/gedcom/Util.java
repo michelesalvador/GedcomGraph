@@ -9,7 +9,7 @@ public class Util {
     public static int VERTICAL_SPACE = 90; // Vertical space between rows of nodes
     public static int VERTICAL_SPACE_CALC; // Same resized on displayNumbers
     public static int HORIZONTAL_SPACE = 15; // Horizontal space between nodes of the same group
-    public static int UNION_DISTANCE = 40; // Horizontal space between unions of the same row
+    public static int UNION_DISTANCE = 35; // Horizontal space between unions of the same row
 
     public static int BOND_WIDTH = 23; // Horizontal distance between partners with no marriage oval
     public static int MINI_BOND_WIDTH = 18; // Horizontal space between ancestry husband and wife
@@ -29,7 +29,7 @@ public class Util {
      * Card types different in size and function.
      */
     enum Card {
-        FULCRUM, // Fulcrum card
+        FULCRUM, // Fulcrum card: only one card has this type
         REGULAR, // Regular size
         ANCESTRY, // Little ancestry above
         PROGENY; // Little progeny below
@@ -43,29 +43,42 @@ public class Util {
     }
 
     /**
-     * Points out a node as single or multi marriage.
+     * Points out a node as main or multi marriage.
      */
     enum Match {
-        SOLE, // It's a single marriage only
-        NEAR, // The marriage is the first of the person
+        MAIN, // Single marriage or the first of a series of multi-marriages
+        NEAR, // The marriage is the other one next to the person
         MIDDLE, // Zero to N marriages between NEAR and FAR
         FAR; // The marriage is at extreme left or right
 
-        static Match get(int totFamilies, Side side, int index) {
-            if (totFamilies > 1) {
-                if ((side == Side.LEFT && index == 0) || (side == Side.RIGHT && index == totFamilies - 1))
-                    return FAR;
-                else if ((side == Side.LEFT && index == totFamilies - 1) || (side == Side.RIGHT && index == 0))
+        /**
+         * @param side     LEFT for husband and RIGHT for wife
+         * @param straight Person inside the MAIN family is not gay and in the right role (husband or wife)
+         */
+        static Match get(int totFamilies, int index, Side side, boolean straight) {
+            if (side == Side.RIGHT) {
+                if (index == 0)
+                    return MAIN;
+                else if (index == 1 && straight)
                     return NEAR;
-                else
-                    return MIDDLE;
+                else if (index == totFamilies - 1)
+                    return FAR;
+            } else {
+                if (index == totFamilies - 1)
+                    return MAIN;
+                else if (index == totFamilies - 2 && straight)
+                    return NEAR;
+                else if (index == 0 /* && totFamilies > 2 */)
+                    return FAR;
             }
-            return SOLE;
+            return MIDDLE;
         }
 
-        // Not so elegant this duplicated method. Maybe it could be unified with the previous one.
-        static Match get2(int totFamilies, Side side, int index) {
-            if ((side == Side.LEFT && index == 0) || (side == Side.RIGHT && index == totFamilies - 1))
+        // Similar to the previous one, but specific for ancestors
+        static Match getForAncestors(int totFamilies, int index, Side side) {
+            if (side == Side.LEFT && index == totFamilies - 1 || side == Side.RIGHT && index == 0)
+                return NEAR;
+            else if (side == Side.LEFT && index == 0 || side == Side.RIGHT && index == totFamilies - 1)
                 return FAR;
             else
                 return MIDDLE;
@@ -74,8 +87,8 @@ public class Util {
         @Override
         public String toString() {
             switch (this) {
-            case SOLE:
-                return "SOLE";
+            case MAIN:
+                return "MAIN";
             case NEAR:
                 return "NEAR";
             case MIDDLE:
@@ -103,17 +116,6 @@ public class Util {
      */
     enum Side {
         NONE, LEFT, RIGHT;
-
-        Branch getBranch() {
-            switch (this) {
-            case LEFT:
-                return Branch.PATER;
-            case RIGHT:
-                return Branch.MATER;
-            default:
-                return Branch.NONE;
-            }
-        }
     }
 
     public enum Gender {
@@ -165,7 +167,8 @@ public class Util {
             // str += " " + person.hashCode();
         }
         // if (str.length() > 10) str = str.substring(0, 10);
-        if (str.isBlank()) str = "[No name]";
+        if (str.isBlank())
+            str = "[No name]";
         return str;
     }
 

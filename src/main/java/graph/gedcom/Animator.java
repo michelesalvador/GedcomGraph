@@ -23,7 +23,7 @@ import graph.gedcom.Util.Side;
 public class Animator {
 
     float width, height;
-    PersonNode fulcrumNode;
+    Group fulcrumGroup;
     int maxAbove;
     List<Node> nodes; // All person and family nodes regular and mini
     List<PersonNode> personNodes;
@@ -34,6 +34,7 @@ public class Animator {
     List<Line> backLines; // All the back (dashed) lines ordered from left to right
     List<LineRow> backLineRows; // All the back (dashed) lines divided in groups in a 2D array
     List<Set<Line>> backLineGroups; // All the back (dashed) lines distributed in groups by proximity
+    List<DuplicateLine> duplicateLines; // All the lines connecting duplicated persons
     List<Group> groups; // Array of groups of PersonNodes and FamilyNodes (not mini)
     List<GroupRow> groupRows;
     List<UnionRow> unionRows; // Array of rows of Unions
@@ -51,6 +52,7 @@ public class Animator {
         backLines = new ArrayList<>();
         backLineRows = new ArrayList<>();
         backLineGroups = new ArrayList<>();
+        duplicateLines = new ArrayList<>();
         groups = new ArrayList<>();
         groupRows = new ArrayList<>();
         unionRows = new ArrayList<>();
@@ -65,9 +67,9 @@ public class Animator {
     }
 
     // Preparing the nodes
-    void initNodes(PersonNode fulcrumNode, int maxAbove, int maxBelow, boolean withNumbers) {
+    void initNodes(Group fulcrumGroup, int maxAbove, int maxBelow, boolean withNumbers) {
 
-        this.fulcrumNode = fulcrumNode;
+        this.fulcrumGroup = fulcrumGroup;
         this.maxAbove = maxAbove;
         width = 0;
         height = 0;
@@ -103,7 +105,7 @@ public class Animator {
                 }
             }
             // Discover the maximum height of rows
-            if (!node.mini && node.height > rowMaxHeight[node.generation + maxAbove])
+            if (!node.mini && !node.getPersonNodes().isEmpty() && node.height > rowMaxHeight[node.generation + maxAbove])
                 rowMaxHeight[node.generation + maxAbove] = node.height;
         }
 
@@ -123,11 +125,11 @@ public class Animator {
             group.setOrigin();
         }
 
-        // Orrible hack in case little numbers are not displayed: removes mini origins that have one child only (or that are stallion)
+        // Orrible hack in case little numbers are not displayed: removes mini origins that have one child only
         if (!withNumbers) {
             for (PersonNode personNode : personNodes) {
                 Node origin = personNode.origin;
-                if (origin != null && origin.mini && (origin.youth.list.size() == 1 || origin.youth.stallion != null)) {
+                if (origin != null && origin.mini && origin.youth.list.size() == 1) {
                     personNode.origin = null;
                     nodes.remove(origin);
                     bonds.remove(((FamilyNode)origin).bond);
@@ -148,11 +150,13 @@ public class Animator {
             // All other lines
             if (node instanceof FamilyNode) {
                 FamilyNode familyNode = (FamilyNode)node;
-                if (familyNode.partners.size() > 0 && (familyNode.getMatch() == Match.MIDDLE || familyNode.getMatch() == Match.FAR))
+                if (!familyNode.partners.isEmpty() && familyNode.match != Match.MAIN)
                     lines.add(new NextLine(familyNode));
                 else if (familyNode.partners.size() > 1 && familyNode.bond.marriageDate == null)
                     lines.add(new HorizontalLine(familyNode));
-                if (familyNode.getMatch() == Match.MIDDLE || familyNode.getMatch() == Match.FAR)
+                if (familyNode.match == Match.NEAR)
+                    lines.add(new BackLine(familyNode));
+                else if (familyNode.match == Match.MIDDLE || familyNode.match == Match.FAR)
                     backLines.add(new BackLine(familyNode));
                 if (familyNode.hasChildren() && familyNode.bond != null)
                     lines.add(new VerticalLine(familyNode));
@@ -162,8 +166,8 @@ public class Animator {
         // Populates groupRows from groups
         for (Group group : groups) {
             if (!group.mini && !group.list.isEmpty()) {
-                // Excludes empty ancestor from the second line down until fulcrum row excluded
-                if (-group.generation < maxAbove && group.generation < 0 && group.list.size() == 1 && group.list.get(0).getPersonNodes().isEmpty())
+                // Excludes empty ancestor from the top down until fulcrum row excluded
+                if (group.generation < 0 && group.list.size() == 1 && group.list.get(0).getPersonNodes().isEmpty())
                     continue;
                 groupRows.get(group.generation + maxAbove).add(group);
             }
@@ -287,9 +291,7 @@ public class Animator {
         /* Horizontal positioning */
 
         // Better first arrange the fulcrum group
-        if (fulcrumNode.familyNode != null) {
-            fulcrumNode.familyNode.group.placeNodes(0);
-        }
+        fulcrumGroup.placeNodes(0);
 
         // Ascends generations disposing ancestors and uncles, starting from from fulcrum generation up
         for (int r = maxAbove; r >= 0; r--) {
@@ -387,6 +389,8 @@ public class Animator {
             }
         }
 
+        for (DuplicateLine line : duplicateLines)
+            line.update();
         distributeLines(lines, lineRows, lineGroups);
         distributeLines(backLines, backLineRows, backLineGroups);
     }

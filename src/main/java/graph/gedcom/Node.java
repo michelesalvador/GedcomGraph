@@ -9,11 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.folg.gedcom.model.Family;
-import org.folg.gedcom.model.Person;
 
 import graph.gedcom.Util.Branch;
 import graph.gedcom.Util.Match;
-import graph.gedcom.Util.Position;
 
 /**
  * Abstract class to be extended in a PersonNode or FamilyNode.
@@ -21,7 +19,6 @@ import graph.gedcom.Util.Position;
 public abstract class Node extends Metric {
 
     public Family spouseFamily; // The person in this node is spouse of this family
-    List<Person> children; // Children of one or many families of PersonNode or of a FamilyNode
     // List of siblings to which this node belongs
     // Warning: an ancestor node can belong at the same time to 2 groups, making this 'group' quite useless
     Group group;
@@ -29,28 +26,17 @@ public abstract class Node extends Metric {
     public int generation; // Number of the generation to which this node belongs (0 for fulcrum, negative up and positive down)
     public boolean mini; // The PersonNode will be displayed little (with just a number), and the familyNode without marriage date
     boolean isAncestor;
+    boolean marriedSiblings; // Especially for FamilyNode, the two partners are also siblings
     Union union; // The union this node belongs to (expecially for ancestors)
     Node prev, next; // Previous and next node on the same row (same generation)
-    // List of the relationship positions.
-    // When there are 2 ancestors, match 0 is for husband (right branch MATER) and match 1 is for wife (left branch PATER).
-    List<Match> matches;
+    Match match; // Position of this node inside possible marriages
     List<Node> origins; // Ordered chain of origins up until generation -1
     float force;
 
-    Node() {
-        children = new ArrayList<>();
-        matches = new ArrayList<>();
-    }
-
     /**
-     * Returns the width from left until the middle of the main node, complementar to getMainWidth(Position).
+     * Returns the width from left until the middle of the main node.
      */
     abstract float getLeftWidth(Branch branch);
-
-    /**
-     * Returns the width relative to the center of main node, included bond and partner.
-     */
-    abstract float getMainWidth(Position pos);
 
     /**
      * Alternative to centerX(), called eventually by curve lines, when bond is already in place.
@@ -150,11 +136,14 @@ public abstract class Node extends Metric {
     abstract List<Node> getOrigins();
 
     /**
-     * This node has at least one regular origin.
+     * This node contains at least one duplicate PersonNode.
      */
-    abstract boolean hasOrigins();
+    abstract boolean isDuplicate();
 
-    abstract FamilyNode getFamilyNode();
+    /**
+     * @return FamilyNode if available, otherwise PersonNode.
+     */
+    abstract Node getFamilyNode();
 
     abstract List<PersonNode> getPersonNodes();
 
@@ -170,18 +159,10 @@ public abstract class Node extends Metric {
     // Strictly returns the requested partner or null
     abstract PersonNode getPartner(int id);
 
-    // Relationship match of this node
-    Match getMatch() {
-        return getMatch(null);
-    }
-
-    abstract Match getMatch(Branch branch);
-
     /**
      * This node is one of the three matches: NEAR, MIDDLE or FAR.
      */
-    boolean isMultiMarriage(Branch branch) {
-        Match match = getMatch(branch);
+    boolean isMultiMarriage() {
         return match == Match.FAR || match == Match.MIDDLE || match == Match.NEAR;
     }
 

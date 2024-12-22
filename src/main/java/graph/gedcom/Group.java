@@ -7,9 +7,9 @@ import static graph.gedcom.Util.LITTLE_GROUP_DISTANCE_CALC;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.folg.gedcom.model.Person;
+
 import graph.gedcom.Util.Branch;
-import graph.gedcom.Util.Match;
-import graph.gedcom.Util.Position;
 
 /**
  * List of person nodes: used to store children of an origin with their spouses.
@@ -18,7 +18,8 @@ public class Group extends Metric {
 
     List<Node> list; // List of PersonNodes and FamilyNodes of siblings and brothers-in-law, children of the origin
     Node origin; // Is the same origin of the Person or Family nodes of the list
-    Node stallion; // The main (NEAR) node when this group is a multi marriage only, that is without siblings
+    PersonNode first; // First not-aquired personNode of the group
+    PersonNode last; // Last not-aquired personNode of the group, may coincide with first
     int generation;
     boolean mini;
     Branch branch;
@@ -44,8 +45,9 @@ public class Group extends Metric {
         node.group = this;
     }
 
-    // Sets the origin to this group taking it from the first not-acquired node of the list
-    // And sets this group as youth of the origin
+    /**
+     * Sets the origin to this group taking it from the first not-acquired node of the list. And sets this group as youth of the origin.
+     */
     void setOrigin() {
         boolean found = false;
         // For ancestors
@@ -67,14 +69,45 @@ public class Group extends Metric {
         }
         if (origin != null)
             origin.youth = this;
-        // Finds the stallion
-        stallion = getStallion();
+
+        // Populates first and last person node
+        if (!mini) {
+            outer: for (Node node : list) {
+                if (node.isAncestor && branch == Branch.MATER && !node.marriedSiblings) {
+                    first = node.getWife();
+                    break outer;
+                } else {
+                    for (PersonNode personNode : node.getPersonNodes()) {
+                        if (!personNode.acquired) {
+                            first = personNode;
+                            break outer;
+                        }
+                    }
+                }
+            }
+            outer: for (int i = list.size() - 1; i >= 0; i--) {
+                Node node = list.get(i);
+                if (node.isAncestor && branch == Branch.PATER && !node.marriedSiblings) {
+                    last = node.getHusband();
+                    break outer;
+                } else {
+                    List<PersonNode> personNodes = node.getPersonNodes();
+                    for (int j = personNodes.size() - 1; j >= 0; j--) {
+                        PersonNode personNode = personNodes.get(j);
+                        if (!personNode.acquired) {
+                            last = personNode;
+                            break outer;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Checks if origin is mini or without partners
     boolean isOriginMiniOrEmpty() {
         if (origin != null) {
-            if (origin.isMultiMarriage(branch))
+            if (origin.isMultiMarriage())
                 return false;
             return origin.mini || origin.getPersonNodes().isEmpty();
         }
@@ -82,45 +115,26 @@ public class Group extends Metric {
     }
 
     /**
-     * If this group is a multimarriage only (without any sibling) returns the NEAR person node, otherwise returns null.
+     * Checks if the group list already contains the person.
      */
-    private Node getStallion() {
-        if (origin != null && origin.children.size() > 1) { // Stallion is a single child of origin
-            return null;
-        }
-        Node nearNode = null;
+    boolean contains(Person person) {
         for (Node node : list) {
-            if (!node.isMultiMarriage(branch))
-                return null;
-            else if (node.getMatch(branch) == Match.NEAR)
-                nearNode = node;
+            for (PersonNode personNode : node.getPersonNodes()) {
+                if (personNode.person.equals(person))
+                    return true;
+            }
         }
-        return nearNode;
+        return false;
     }
 
     /**
      * Horizontally distributes nodes of this group centered to centerX.
      */
     public void placeNodes(float centerX) {
-        // Place stallion child and their spouses
-        if (stallion != null) {
-            stallion.setX(centerX - stallion.getLeftWidth(null));
-            Node right = stallion;
-            while (right.next != null && right.next.group == this) {
-                right.next.setX(right.x + right.width + HORIZONTAL_SPACE);
-                right = right.next;
-            }
-            Node left = stallion;
-            while (left.prev != null && left.prev.group == this) {
-                left.prev.setX(left.x - HORIZONTAL_SPACE - left.prev.width);
-                left = left.prev;
-            }
-        } else { // Place normal youth
-            float posX = centerX - getBasicLeftWidth() - getBasicCentralWidth() / 2;
-            for (Node child : list) {
-                child.setX(posX);
-                posX += child.width + HORIZONTAL_SPACE;
-            }
+        float posX = centerX - getBasicLeftWidth() - getBasicCentralWidth() / 2;
+        for (Node child : list) {
+            child.setX(posX);
+            posX += child.width + HORIZONTAL_SPACE;
         }
     }
 
@@ -154,19 +168,14 @@ public class Group extends Metric {
      * Places horizontally the origin centered to this group nodes.
      */
     void placeOriginX() {
-        if (stallion != null)
-            origin.setX(stallion.x + stallion.getLeftWidth(branch) - origin.centerRelX());
-        else {
-            updateX();
-            origin.setX(x + getLeftWidth() + getCentralWidth() / 2 - origin.centerRelX());
-        }
+        origin.setX(first.centerX() + (last.centerX() - first.centerX()) / 2 - origin.centerRelX());
     }
 
     /**
      * Places mini origin or regular origin without partners. Different distance whether this group has one node or multiple nodes.
      */
     void placeOriginY() {
-        origin.setY(y - (list.size() > 1 && stallion == null ? LITTLE_GROUP_DISTANCE_CALC : ANCESTRY_DISTANCE) - origin.height);
+        origin.setY(y - (first.equals(last) ? ANCESTRY_DISTANCE : LITTLE_GROUP_DISTANCE_CALC) - origin.height);
     }
 
     void moveDescending(float shift) {
@@ -179,13 +188,10 @@ public class Group extends Metric {
         }
     }
 
-    // Excluded acquired spouses at right
     @Override
     public float centerRelX() {
-        if (stallion != null)
-            return stallion.x + stallion.getLeftWidth(branch) - x;
-        else
-            return getLeftWidth() + getCentralWidth() / 2;
+        // Acquired spouses included at left, but excluded at right
+        return first.centerX() - x + (last.centerX() - first.centerX()) / 2;
     }
 
     @Override
@@ -221,12 +227,14 @@ public class Group extends Metric {
         return width;
     }
 
-    // Fixed left width relative to the first SOLE or NEAR node of the group, including acquired spouses
-    float getBasicLeftWidth() {
+    /**
+     * @return The fixed left width relative to the first MAIN node of the group, including acquired spouses
+     */
+    private float getBasicLeftWidth() {
         float width = 0;
-        for (int i = 0; i < list.size(); i++) {
-            Node node = list.get(i);
-            if (node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR) {
+        for (Node node : list) {
+            // if (node.match == Match.MAIN) { // TODO verifica in albero con multimariagges tra fratelli senza zii
+            if (node.getPersonNodes().contains(first)) {
                 width += node.getLeftWidth(branch);
                 break;
             } else {
@@ -236,70 +244,18 @@ public class Group extends Metric {
         return width;
     }
 
-    // Children's center-to-center fixed width excluding acquired spouses at the extremes
-    float getBasicCentralWidth() {
-        float width = 0;
-        if (list.size() > 1) {
-            // Width of the first useful node
-            int start = 0;
-            for (int i = 0; i < list.size(); i++) {
-                Node node = list.get(i);
-                if (node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR) {
-                    width = node.getMainWidth(Position.FIRST) + HORIZONTAL_SPACE;
-                    start = i;
-                    break;
-                }
-            }
-            // Width of the last useful node starting from the end
-            int end = 0;
-            for (int i = list.size() - 1; i > 0; i--) {
-                Node node = list.get(i);
-                if (node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR) {
-                    width += node.getMainWidth(Position.LAST);
-                    end = i;
-                    break;
-                }
-            }
-            // Width of nodes in the middle
-            for (int i = start + 1; i < end; i++) {
-                width += list.get(i).getMainWidth(Position.MIDDLE) + HORIZONTAL_SPACE;
-            }
-        }
-        return width;
-    }
-
     /**
-     * @return The not fixed to-center width of the first SOLE or NEAR node from the left
+     * @return The nodes center-to-center fixed width excluding acquired spouses at the extremes.
      */
-    private float getLeftWidth() {
-        for (int i = 0; i < list.size(); i++) {
-            Node node = list.get(i);
-            if (node.getMatch() == Match.SOLE || node.getMatch() == Match.NEAR) {
-                return node.x - list.get(0).x + node.getLeftWidth(branch);
-            }
-        }
-        return 0;
-    }
-
-    /**
-     * @return The not fixed central width of the group excluding acquired spouses at extremes
-     */
-    float getCentralWidth() {
+    private float getBasicCentralWidth() {
         float width = 0;
-        if (list.size() > 1) {
-            Node first = null;
-            for (int i = 0; i < list.size(); i++) {
-                first = list.get(i);
-                if (first.getMatch() == Match.SOLE || first.getMatch() == Match.NEAR)
-                    break;
+        if (!first.equals(last)) {
+            Node start = first.getFamilyNode();
+            Node end = last.getFamilyNode();
+            for (int i = list.indexOf(start); i < list.indexOf(end); i++) {
+                width += list.get(i).width + HORIZONTAL_SPACE;
             }
-            Node last = null;
-            for (int i = list.size() - 1; i > 0; i--) {
-                last = list.get(i);
-                if (last.getMatch() == Match.SOLE || last.getMatch() == Match.NEAR)
-                    break;
-            }
-            width = first.getMainWidth(Position.FIRST) + last.x - (first.x + first.width) + last.getMainWidth(Position.LAST);
+            width = width - start.getLeftWidth(branch) + end.getLeftWidth(branch);
         }
         return width;
     }
@@ -314,6 +270,7 @@ public class Group extends Metric {
     @Override
     public String toString() {
         String txt = "";
+        // txt += generation + ": ";
         txt += list;
         // txt += " " + branch;
         // txt += " " + hashCode();

@@ -4,7 +4,7 @@ import graph.gedcom.Util.Match;
 import graph.gedcom.Util.Side;
 
 /**
- * Horizontal dashed line to connect following multiple partners.
+ * Horizontal continous or dashed line to connect following multiple partners.
  */
 public class BackLine extends Line {
 
@@ -18,7 +18,7 @@ public class BackLine extends Line {
     public BackLine(FamilyNode familyNode) {
         bond = familyNode.bond;
         side = familyNode.side;
-        match = familyNode.getMatch();
+        match = familyNode.match;
         noPartners = familyNode.partners.isEmpty();
         leftToRight = familyNode.leftToRight;
         node = familyNode;

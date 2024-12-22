@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>graph.gedcom</groupId>
 	<artifactId>gedcomgraph</artifactId>
-	<version>3.8</version>
+	<version>3.9</version>
 	<packaging>jar</packaging>
 	<build>
 		<plugins>
@@ -32,7 +32,7 @@
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>2.13.0</version>
+			<version>2.18.0</version>
 		</dependency>
 	</dependencies>
 </project>

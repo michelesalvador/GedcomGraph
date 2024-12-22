@@ -55,16 +55,16 @@ public class FamilyNode extends Node {
     }
 
     @Override
-    boolean hasOrigins() {
+    boolean isDuplicate() {
         for (PersonNode partner : partners) {
-            if (partner.origin != null && !partner.origin.mini)
+            if (partner.duplicate)
                 return true;
         }
         return false;
     }
 
     @Override
-    FamilyNode getFamilyNode() {
+    Node getFamilyNode() {
         return this;
     }
 
@@ -105,15 +105,6 @@ public class FamilyNode extends Node {
         return null;
     }
 
-    @Override
-    Match getMatch(Branch branch) {
-        if (matches.size() > 1 && branch == Branch.PATER)
-            return matches.get(1);
-        else if (matches.size() > 0)
-            return matches.get(0);
-        return null;
-    }
-
     // Add a spouse to this family
     void addPartner(PersonNode partner) {
         this.partners.add(partner);
@@ -121,9 +112,11 @@ public class FamilyNode extends Node {
         partner.spouseFamily = spouseFamily;
     }
 
-    // Crate bond if there are no partners or many partners
+    /**
+     * Creates bond if there are no partners or many partners.
+     */
     void createBond() {
-        if (partners.size() == 1 && getMatch() != Match.MIDDLE && getMatch() != Match.FAR)
+        if (partners.size() == 1 && match == Match.MAIN)
             return;
         bond = new Bond(this);
         if (!mini && partners.size() > 0) {
@@ -213,29 +206,6 @@ public class FamilyNode extends Node {
         return 0;
     }
 
-    @Override
-    float getMainWidth(Position pos) {
-        float size = 0;
-        PersonNode mainPerson = getMainPersonNode();
-        int index = partners.indexOf(mainPerson);
-        if (pos == Position.FIRST) {
-            if (group.branch == Branch.MATER) {
-                size = getWife().centerRelX();
-            } else if (mainPerson != null) {
-                size = mainPerson.centerRelX();
-                if (index == 0 && partners.size() > 1) // Main person is husband
-                    size += getBondWidth() + getPartner(1).width;
-            }
-        } else if (pos == Position.LAST && mainPerson != null) {
-            size = mainPerson.centerRelX();
-            if (index > 0) // Main person is wife
-                size += getPartner(0).width + getBondWidth();
-        } else { // The complete width
-            size = width;
-        }
-        return size;
-    }
-
     // Bond width excluding overlapping
     float getBondWidth() {
         if (bond != null)
@@ -246,7 +216,7 @@ public class FamilyNode extends Node {
     @Override
     public String toString() {
         String txt = "";
-        // for (Match match : matches) txt += match + " ";
+        // txt += match + " ";
         txt += "{";
         for (PersonNode personNode : partners)
             txt += personNode + ", ";
