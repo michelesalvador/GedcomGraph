@@ -1,0 +1,14 @@
+plugins {
+    id 'java'
+}
+
+version = '3.9'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.familysearch.gedcom:gedcom:1.14.0'
+    implementation 'commons-io:commons-io:2.18.0'
+}
