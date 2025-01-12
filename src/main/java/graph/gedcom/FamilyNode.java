@@ -1,23 +1,15 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.BOND_WIDTH;
-import static graph.gedcom.Util.MARRIAGE_INNER_WIDTH;
-import static graph.gedcom.Util.MINI_BOND_WIDTH;
+import org.folg.gedcom.model.EventFact;
+import org.folg.gedcom.model.Family;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.folg.gedcom.model.EventFact;
-import org.folg.gedcom.model.Family;
-
-import graph.gedcom.Util.Branch;
-import graph.gedcom.Util.Match;
-import graph.gedcom.Util.Position;
-import graph.gedcom.Util.Side;
+import static graph.gedcom.Util.*;
 
 /**
- * Container of the parners (PersonNode) and the link between them (Bond).
- *
+ * Container of the partners (PersonNode) and the link between them (Bond).
  * Being a Node, can be the origin of a youth Group.
  */
 public class FamilyNode extends Node {
@@ -48,7 +40,7 @@ public class FamilyNode extends Node {
     List<Node> getOrigins() {
         List<Node> origins = new ArrayList<>();
         for (PersonNode partner : partners) {
-            if (partner.origin != null && !partner.origin.mini && partner.origin.getPersonNodes().size() > 0)
+            if (partner.origin != null && !partner.origin.mini && !partner.origin.getPersonNodes().isEmpty())
                 origins.add(partner.origin);
         }
         return origins;
@@ -119,7 +111,7 @@ public class FamilyNode extends Node {
         if (partners.size() == 1 && match == Match.MAIN)
             return;
         bond = new Bond(this);
-        if (!mini && partners.size() > 0) {
+        if (!mini && !partners.isEmpty()) {
             // GEDCOM date of the marriage
             for (EventFact ef : spouseFamily.getEventsFacts()) {
                 if (ef.getTag().equals("MARR"))
@@ -130,7 +122,7 @@ public class FamilyNode extends Node {
 
     // If this node has children
     boolean hasChildren() {
-        if (mini) // Acquired mini ancestry don't have youth but they appear to have
+        if (mini) // Acquired mini ancestry don't have youth, but they appear to have
             return true;
         return youth != null;
     }
@@ -172,15 +164,13 @@ public class FamilyNode extends Node {
         } else {
             for (int i = 0; i < partners.size(); i++) {
                 PersonNode partner = partners.get(i);
+                partner.x = x;
                 if (i == 0) {
-                    partner.x = x;
                     x += partner.width;
                     if (bond != null) {
                         bond.setX(x);
                         x += getBondWidth();
                     }
-                } else {
-                    partner.x = x;
                 }
             }
         }
@@ -215,16 +205,16 @@ public class FamilyNode extends Node {
 
     @Override
     public String toString() {
-        String txt = "";
-        // txt += match + " ";
-        txt += "{";
+        StringBuilder builder = new StringBuilder();
+        //builder.append(match).append(" ");
+        builder.append("{");
         for (PersonNode personNode : partners)
-            txt += personNode + ", ";
-        if (txt.lastIndexOf(", ") > 0)
-            txt = txt.replaceAll(", $", "");
-        // txt += " " + hashCode();
-        // txt += " " + group.branch;
-        txt += "}";
-        return txt;
+            builder.append(personNode).append(", ");
+        if (builder.lastIndexOf(", ") > 0)
+            builder = new StringBuilder(builder.toString().replaceAll(", $", ""));
+        //builder.append(" ").append(hashCode());
+        //builder.append(" ").append(group.branch);
+        builder.append("}");
+        return builder.toString();
     }
 }

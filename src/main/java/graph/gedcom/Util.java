@@ -28,18 +28,11 @@ public class Util {
     /**
      * Card types different in size and function.
      */
-    enum Card {
+    public enum Card {
         FULCRUM, // Fulcrum card: only one card has this type
         REGULAR, // Regular size
         ANCESTRY, // Little ancestry above
-        PROGENY; // Little progeny below
-    }
-
-    /**
-     * Position of the node in the group.
-     */
-    enum Position {
-        FIRST, MIDDLE, LAST;
+        PROGENY // Little progeny below
     }
 
     /**
@@ -87,16 +80,16 @@ public class Util {
         @Override
         public String toString() {
             switch (this) {
-            case MAIN:
-                return "MAIN";
-            case NEAR:
-                return "NEAR";
-            case MIDDLE:
-                return "MIDDLE";
-            case FAR:
-                return "FAR";
-            default:
-                return null;
+                case MAIN:
+                    return "MAIN";
+                case NEAR:
+                    return "NEAR";
+                case MIDDLE:
+                    return "MIDDLE";
+                case FAR:
+                    return "FAR";
+                default:
+                    return null;
             }
         }
     }
@@ -107,15 +100,15 @@ public class Util {
     enum Branch {
         NONE, // Single ancestors (male or female)
         PATER, // Paternal (left)
-        MATER; // Maternal (right)
+        MATER // Maternal (right)
     }
 
     /**
      * Requested position of uncles respect to parents node: a single parent can have siblings (the uncles) on both left and right sides.
      * Same for half-siblings of fulcrum when a single parent is shown: they can be on the left and to the right of fulcrum.
      */
-    enum Side {
-        NONE, LEFT, RIGHT;
+    public enum Side {
+        NONE, LEFT, RIGHT
     }
 
     public enum Gender {
@@ -131,14 +124,14 @@ public class Util {
             for (EventFact fact : person.getEventsFacts()) {
                 if (fact.getTag() != null && fact.getTag().equals("SEX") && fact.getValue() != null) {
                     switch (fact.getValue()) { // Can not be null
-                    case "M":
-                        return MALE;
-                    case "F":
-                        return FEMALE;
-                    case "U":
-                        return UNDEFINED;
-                    default:
-                        return OTHER; // Other value
+                        case "M":
+                            return MALE;
+                        case "F":
+                            return FEMALE;
+                        case "U":
+                            return UNDEFINED;
+                        default:
+                            return OTHER; // Other value
                     }
                 }
             }
@@ -167,16 +160,16 @@ public class Util {
             // str += " " + person.hashCode();
         }
         // if (str.length() > 10) str = str.substring(0, 10);
-        if (str.isBlank())
-            str = "[No name]";
+        if (str.trim().isEmpty()) str = "[No name]";
         return str;
     }
 
-    // Prints everything to the console
+    /**
+     * Prints anything to the console.
+     */
     public static void p(Object... objects) {
-        String str = "";
-        for (Object obj : objects)
-            str += obj + " ";
-        System.out.println(str);
+        StringBuilder builder = new StringBuilder();
+        for (Object obj : objects) builder.append(obj).append(" ");
+        System.out.println(builder.toString().trim());
     }
 }

@@ -2,7 +2,7 @@
 
 GedcomGraph is a Java library that creates a graphic model of a genealogical tree on top of a [GEDCOM 5 Java](https://github.com/FamilySearch/gedcom5-java) object.
 
-GedcomGraph doesn't produce any kind of graphic output, but only the Java model of a genealogical tree on a cartesian plane, with the center on the top-left corner.  
+GedcomGraph doesn't produce any kind of graphic output, but only the Java model of a genealogical tree on a cartesian plane, with the center in the top-left corner.  
 To become a visible diagram, a further graphical implementation is needed, such a Java Canvas or an Android app.
 
 GedcomGraph has been primary created to generate the genealogical diagram into the Android app [Family Gem](https://github.com/michelesalvador/FamilyGem).
@@ -14,7 +14,7 @@ GedcomGraph is written in Java 1.8, so to be compatible with older versions of A
 
 GedcomGraph can receive some options to modify the tree output, but basically the tree has always the zero coordinates on top-left corner, the ancestors above and the descendants below, and one single person as fulcrum.
 
-GedcomGraph is a Maven project written with Eclipse.  
+GedcomGraph is a Gradle project written with IntelliJ IDEA (formerly a Maven project written with Eclipse).  
 The project started on December 2019.  
 Author is Michele Salvador, an italian programmer and genealogy enthusiast.
 

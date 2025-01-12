@@ -1,12 +1,11 @@
 package graph.gedcom;
 
-import java.util.ArrayList;
-
 import org.folg.gedcom.model.Person;
 
+import java.util.ArrayList;
+
 /**
- * List of one or many nodes (FamilyNode and PersonNode) representig a single or multiple marriages of one person.
- *
+ * List of one or many nodes (FamilyNode and PersonNode) representing a single or multiple marriages of one person.
  * Node > Genus > Group > Union
  */
 public class Genus extends ArrayList<Node> {
@@ -27,14 +26,14 @@ public class Genus extends ArrayList<Node> {
 
     @Override
     public String toString() {
-        String txt = "[";
+        StringBuilder builder = new StringBuilder("[");
         for (Node node : this) {
-            txt += node;
-            // txt += " " + node.getMatch();
-            txt += " - ";
+            builder.append(node);
+            //builder.append(" ").append(node.match);
+            builder.append(" - ");
         }
-        txt = txt.replaceAll(" - $", "");
-        txt += "]";
-        return txt;
+        builder = new StringBuilder(builder.toString().replaceAll(" - $", ""));
+        builder.append("]");
+        return builder.toString();
     }
 }

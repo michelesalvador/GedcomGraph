@@ -21,10 +21,9 @@ class GroupRow extends ArrayList<Group> {
 
     @Override
     public String toString() {
-        String txt = generation + ": <";
+        StringBuilder builder = new StringBuilder(generation + ": <");
         for (Group group : this)
-            txt += group + ", ";
-        txt = txt.replaceAll(", $", ">");
-        return txt;
+            builder.append(group).append(", ");
+        return builder.toString().replaceAll(", $", ">");
     }
 }

@@ -1,17 +1,16 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.HORIZONTAL_SPACE;
-import static graph.gedcom.Util.UNION_DISTANCE;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static graph.gedcom.Util.HORIZONTAL_SPACE;
+import static graph.gedcom.Util.UNION_DISTANCE;
+
 /**
  * Stores a list of PersonNodes and/or FamilyNodes that move horizontally together, ordered left to right.
- *
- * It may coincide with a Group of descendants, or it may be the result of two Groups of ancestors merged together, two Groups sharing the
- * same ancestor(s) Node.
+ * It may coincide with a Group of descendants, or it may be the result of two Groups of ancestors merged together,
+ * two Groups sharing the same ancestor(s) Node.
  */
 public class Union extends Metric {
 
@@ -96,9 +95,7 @@ public class Union extends Metric {
     void moveDescending(float shift) {
         setX(x + shift);
         for (Node node : list) {
-            if (node.youth != null) { // TODO && !node.youth.mini ?
-                node.youth.moveDescending(shift);
-            }
+            if (node.youth != null) node.youth.moveDescending(shift);
         }
     }
 
@@ -109,11 +106,16 @@ public class Union extends Metric {
      */
     void outdistanceAncestorColumn() {
         columnShift = 0;
-        // Finds how much to shift this union respect previous union
+        // Finds how much to shift this union respect previous and next union
         ancestor.youth.updateX(); // Useful
-        float youthDistance = centerX() - ancestor.youth.centerX();
-        if (prev != null && prev.descendants.get(0).equals(descendants.get(0)) && youthDistance > 1) { // youthDistance may have a micro error
-            columnShift = prev.x + prev.getWidth() + UNION_DISTANCE - x; // Positive overlap or negative distance
+        float youthDistance = ancestor.youth.centerX() - centerX();
+        if (prev != null && prev.descendants.get(0).equals(descendants.get(0))) {
+            float leftShift = prev.x + prev.getWidth() + UNION_DISTANCE - x; // Positive overlap or negative distance
+            columnShift = Math.max(leftShift, youthDistance);
+        }
+        if (next != null && next.descendants.get(0).equals(descendants.get(0))) {
+            float rightShift = next.x - x - getWidth() - UNION_DISTANCE; // Negative overlap or positive distance
+            columnShift = Math.min(rightShift, youthDistance);
         }
         findAncestorColumnShift(ancestor);
         if (columnShift != 0) {
@@ -131,6 +133,13 @@ public class Union extends Metric {
                 float leftShift = prev.x + prev.getWidth() + UNION_DISTANCE - origin.union.x; // Positive overlap or negative distance
                 if (leftShift > columnShift) {
                     columnShift = leftShift;
+                }
+            }
+            Union next = origin.union.next;
+            if (next != null && !next.descendants.contains(this)) {
+                float rightShift = next.x - origin.union.x - origin.union.getWidth() - UNION_DISTANCE; // Negative overlap or positive distance
+                if (rightShift < columnShift) {
+                    columnShift = rightShift;
                 }
             }
             findAncestorColumnShift(origin);
@@ -151,9 +160,9 @@ public class Union extends Metric {
             firstOrigin.youth.updateX();
             secondOrigin.youth.updateX();
             float youthsDistance = secondOrigin.youth.centerX() - firstOrigin.youth.centerX();
-            float discrepance = origin2X - origin1X - youthsDistance;
-            return origin1X - firstOrigin.youth.centerRelX() - x + discrepance / 2;
-        } else if (origins.size() > 0) {
+            float discrepancy = origin2X - origin1X - youthsDistance;
+            return origin1X - firstOrigin.youth.centerRelX() - x + discrepancy / 2;
+        } else if (!origins.isEmpty()) {
             Node origin = origins.get(0);
             if (origin.union != null) {
                 updateX();
@@ -200,7 +209,7 @@ public class Union extends Metric {
         }
     }
 
-    // Excluded spuses at extremes
+    // Excluded spouses at extremes
     @Override
     public float centerRelX() {
         // Is always ancestor or fulcrum union
@@ -229,7 +238,9 @@ public class Union extends Metric {
         this.y = y;
     }
 
-    // Total width of the union considering all nodes
+    /**
+     * Total width of the union considering all nodes.
+     */
     float getWidth() {
         Node lastChild = list.get(list.size() - 1);
         if (list.size() == 1)

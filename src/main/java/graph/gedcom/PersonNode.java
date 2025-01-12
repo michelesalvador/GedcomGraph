@@ -1,20 +1,19 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.essence;
-
-import java.util.ArrayList;
-import java.util.List;
-
+import graph.gedcom.Util.Branch;
+import graph.gedcom.Util.Card;
 import org.folg.gedcom.model.EventFact;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
 
-import graph.gedcom.Util.Branch;
-import graph.gedcom.Util.Card;
+import java.util.ArrayList;
+import java.util.List;
+
+import static graph.gedcom.Util.essence;
 
 /**
- * A node representig a single person.
+ * A node representing a single person.
  */
 public class PersonNode extends Node {
 
@@ -29,7 +28,6 @@ public class PersonNode extends Node {
     public int amount; // Number to display in little ancestry or progeny
     public boolean duplicate; // This person already appeared on the diagram
     boolean isHalfSibling; // This person is a half-sibling of fulcrum
-    CurveLine line; // Curve line connecting this person with the origin above
 
     public PersonNode(Gedcom gedcom, Person person, Card type) {
         super();
@@ -45,7 +43,7 @@ public class PersonNode extends Node {
             mini = true;
         } else if (type == Card.PROGENY) {
             amount = 1;
-            countDescendants(gedcom);
+            countDescendants(person);
             mini = true;
         }
     }
@@ -110,7 +108,9 @@ public class PersonNode extends Node {
         return null;
     }
 
-    // Recoursive count of direct ancestors
+    /**
+     * Recursive count of direct ancestors.
+     */
     private void countAncestors(Person ancestor) {
         if (amount <= 100) {
             for (Family family : ancestor.getParentFamilies(gedcom)) {
@@ -126,23 +126,22 @@ public class PersonNode extends Node {
         }
     }
 
-    // Recoursive count of direct descendants
-    void countDescendants(Gedcom gedcom) {
-        this.gedcom = gedcom;
-        recoursiveCountDescendants(person);
-    }
-
-    private void recoursiveCountDescendants(Person person) {
+    /**
+     * Recursive count of direct descendants.
+     */
+    private void countDescendants(Person person) {
         if (amount <= 100) {
             for (Family family : person.getSpouseFamilies(gedcom))
                 for (Person child : family.getChildren(gedcom)) {
                     amount++;
-                    recoursiveCountDescendants(child);
+                    countDescendants(child);
                 }
         }
     }
 
-    // Check if this person is dead or buried
+    /**
+     * Checks if this person is dead or buried.
+     */
     private boolean isDead() {
         for (EventFact fact : person.getEventsFacts()) {
             if (fact.getTag().equals("DEAT") || fact.getTag().equals("BURI"))
@@ -191,20 +190,19 @@ public class PersonNode extends Node {
 
     @Override
     public String toString() {
-        if (mini)
+        if (mini) {
             return amount + " (" + essence(person) + ")";
-        else {
+        } else {
             String txt = "";
-            // txt += " " + Math.floor(force);
-            // txt += " " + generation;
-            // txt += " " + match;
+            //txt += " " + Math.floor(force);
+            //txt += " " + generation;
+            //txt += " " + match;
             txt += " " + essence(person);
-            // txt += " *" + origin + "*";
-            // txt += " " + person.getId();
-            // txt += " " + (group != null ? group : "null"); // Produce stackoverflow
-            // txt += " " + (group != null ? group.branch : "group=null");
-            if (duplicate)
-                txt += " (2)";
+            //txt += " *" + origin + "*";
+            //txt += " " + person.getId();
+            //txt += " " + (group != null ? group : "null"); // Produce stackoverflow
+            //txt += " " + (group != null ? group.branch : "group=null");
+            if (duplicate) txt += " (2)";
             return txt.trim();
         }
     }

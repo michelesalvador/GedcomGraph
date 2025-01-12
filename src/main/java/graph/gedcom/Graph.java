@@ -1,19 +1,14 @@
 package graph.gedcom;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
+import graph.gedcom.Util.*;
 import org.folg.gedcom.model.Family;
 import org.folg.gedcom.model.Gedcom;
 import org.folg.gedcom.model.Person;
 
-import graph.gedcom.Util.Branch;
-import graph.gedcom.Util.Card;
-import graph.gedcom.Util.Gender;
-import graph.gedcom.Util.Match;
-import graph.gedcom.Util.Side;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Main public class to build the tree diagram, responsible to collect all the relatives around a fulcrum person.
@@ -34,7 +29,7 @@ public class Graph {
     private boolean withDuplicateLines = true; // Displays lines connecting duplicate persons
 
     private Gedcom gedcom;
-    private Animator animator;
+    private final Animator animator;
     private Group fulcrumGroup;
     private int maxAbove; // Max upper generation of ancestors (positive number), excluding mini ancestries
     private int maxBelow; // Max generation of descendants, excluding mini progenies
@@ -52,7 +47,7 @@ public class Graph {
     }
 
     /**
-     * If the fulcrum is child in more than one family, you can choose wich family to display.
+     * If the fulcrum is child in more than one family, you can choose which family to display.
      *
      * @param num The number of the family (0 if fulcrum has only one family)
      * @return The diagram, just for methods concatenation
@@ -231,10 +226,9 @@ public class Graph {
             // Find relatives on the right of fulcrum
             if (parentSize > 0 && ancestorGenerations > 0) {
                 if (second == null) { // Single parent
-                    // if (first != null /*&& first.person.getSpouseFamilyRefs().size() <= 1*/) {
                     findHalfSiblings(first, parentFamily, Side.RIGHT);
+                    assert first != null;
                     findUncles(first, firstParentGroup, Side.RIGHT);
-                    // }
                 } else if (parentSiblings) { // Sibling parents
                     findHalfSiblings(second, parentFamily, Side.NONE);
                     findAncestors(second, firstParentGroup, 1, true);
@@ -263,14 +257,14 @@ public class Graph {
      *
      * @param commonNode     The node with the person to start from
      * @param group          Where to add the ancestor and their siblings (great-uncles)
-     * @param generUp        Number of the generation of the commonNode: 0 for fulcrum, 1 for parents, 2 for grand-parents etc.
+     * @param generationUp   Number of the generation of the commonNode: 0 for fulcrum, 1 for parents, 2 for grandparents etc.
      * @param siblingPartner If true, means that commonNode is sibling of their partner
      */
-    private void findAncestors(PersonNode commonNode, Group group, int generUp, boolean siblingPartner) {
-        // In case commonNode is the second parner and sibling of first one
-        List<PersonNode> parners = commonNode.getFamilyNode().getPersonNodes();
-        if (siblingPartner && parners.indexOf(commonNode) == 1) {
-            commonNode.origin = parners.get(0).origin;
+    private void findAncestors(PersonNode commonNode, Group group, int generationUp, boolean siblingPartner) {
+        // In case commonNode is the second partner and sibling of first one
+        List<PersonNode> partners = commonNode.getFamilyNode().getPersonNodes();
+        if (siblingPartner && partners.indexOf(commonNode) == 1) {
+            commonNode.origin = partners.get(0).origin;
             return;
         }
         if (commonNode.duplicate)
@@ -278,13 +272,13 @@ public class Graph {
         List<Family> parentFamilies = commonNode.person.getParentFamilies(gedcom);
         if (!parentFamilies.isEmpty()) {
             Family family = parentFamilies.get(parentFamilies.size() - 1); // Always last family
-            int parentGen = generUp + 1;
+            int parentGen = generationUp + 1;
             boolean parentMini = parentGen > ancestorGenerations;
             Group firstParentGroup = createGroup(-parentGen, parentMini, null);
             FamilyNode parentNode = createNodeFromFamily(family, -parentGen, parentMini ? Card.ANCESTRY : Card.REGULAR);
             commonNode.origin = parentNode;
             // Add the great-uncles (siblings of ancestor) with their spouses
-            if (generUp > 1) { // Uncles of the parents generation (1) are found before
+            if (generationUp > 1) { // Uncles of the parents generation (1) are found before
                 if (commonNode.getFamilyNode().getPersonNodes().size() > 1 && !siblingPartner) {
                     findUncles(commonNode, group, Side.NONE);
                 } else {
@@ -304,7 +298,7 @@ public class Graph {
             if (parentGen > maxAbove && !parentMini)
                 maxAbove = parentGen;
             // Recalls this method
-            if (generUp < ancestorGenerations) {
+            if (generationUp < ancestorGenerations) {
                 if (second != null) {
                     // First parent
                     findAncestors(first, firstParentGroup, parentGen, siblingParents);
@@ -357,7 +351,7 @@ public class Graph {
                             if (withNumbers && -generation <= greatUnclesGenerations + 1)
                                 findDescendants(node, generation, 0, false);
                         } else if (siblingNephewGenerations > 0) // Regular descendants
-                            findDescendants(node, -1, siblingNephewGenerations + 1, side == Side.LEFT ? true : false);
+                            findDescendants(node, -1, siblingNephewGenerations + 1, side == Side.LEFT);
                     }
                 }
             }
@@ -373,8 +367,8 @@ public class Graph {
      *                   (Side.NONE) puts all uncles to one side (Branch.PATER or Branch.MATER).
      */
     void findUncles(PersonNode personNode, Group group, final Side side) {
-        final int generUp = -personNode.generation;
-        if (generUp <= greatUnclesGenerations || (generUp == 1 && uncleCousinGenerations > 0)) {
+        final int generationUp = -personNode.generation;
+        if (generationUp <= greatUnclesGenerations || (generationUp == 1 && uncleCousinGenerations > 0)) {
             Node origin = personNode.origin;
             if (origin != null) {
                 Branch branch = group.branch;
@@ -382,7 +376,7 @@ public class Graph {
                 List<Person> uncles = origin.spouseFamily.getChildren(gedcom);
                 int start = 0;
                 int end = uncles.size();
-                if (branch == Branch.NONE) { // Not particulary paternal or maternal uncles (could be on both sides of ancestor)
+                if (branch == Branch.NONE) { // Not particular paternal or maternal uncles (could be on both sides of ancestor)
                     if (side == Side.LEFT)
                         end = uncles.indexOf(person); // From beginning until ancestor
                     else if (side == Side.RIGHT)
@@ -393,17 +387,17 @@ public class Graph {
                     Person uncle = uncles.get(i);
                     if (!group.contains(uncle)) {
                         // Uncles if visible are always regular, never mini card
-                        Genus uncleGenus = findPersonGenus(uncle, origin, -generUp, Card.REGULAR, null);
+                        Genus uncleGenus = findPersonGenus(uncle, origin, -generationUp, Card.REGULAR, null);
                         for (Node uncleNode : uncleGenus) {
                             if (branch == Branch.PATER || branch == Branch.NONE && side == Side.LEFT) {
                                 group.addNode(uncleNode, position++); // Uncle will be put at the beginning
                             } else { // Maternal uncles at far right
                                 group.addNode(uncleNode);
                             }
-                            if (generUp == 1) // Add the cousins and possibly their descendants
-                                findDescendants(uncleNode, -1, uncleCousinGenerations, position > 0 ? true : false);
+                            if (generationUp == 1) // Add the cousins and possibly their descendants
+                                findDescendants(uncleNode, -1, uncleCousinGenerations, position > 0);
                             else // Mini progeny of great-uncles
-                                findDescendants(uncleNode, -generUp, 1, false);
+                                findDescendants(uncleNode, -generationUp, 1, false);
                         }
                     }
                 }
@@ -447,7 +441,7 @@ public class Graph {
     }
 
     /**
-     * Recoursive method to find the descendants.
+     * Recursive method to find the descendants.
      *
      * @param commonNode      Node containing the person/family of whom to find descendants. Can be a PersonNode or a FamilyNode.
      * @param startGeneration Number of the generation of the first 'commonNode': -1 for parents, 0 for fulcrum, 1 for children etc.
@@ -514,11 +508,9 @@ public class Graph {
                 Family family = families.get(i);
                 Match match = Match.get(families.size(), i, side, straight);
                 Node partnerNode;
-                switch (match) {
-                case MAIN: // First or unique marriage, or lonley person
+                if (match == Match.MAIN) { // First or unique marriage, or lonely person
                     partnerNode = createNodeFromPerson(person, family, parentNode, generation, type, match);
-                    break;
-                default: // Near, middle or far marriage
+                } else { // Near, middle or far marriage
                     partnerNode = createNextFamilyNode(family, person, generation, side, match, parentNode);
                 }
                 if (group != null)
@@ -700,10 +692,8 @@ public class Graph {
         if (first != null && second != null) {
             List<Family> firstFamilies = first.person.getParentFamilies(gedcom);
             List<Family> secondFamilies = second.person.getParentFamilies(gedcom);
-            if (!firstFamilies.isEmpty() && !secondFamilies.isEmpty()
-                    && firstFamilies.get(firstFamilies.size() - 1).equals(secondFamilies.get(secondFamilies.size() - 1))) {
-                return true;
-            }
+            return !firstFamilies.isEmpty() && !secondFamilies.isEmpty()
+                    && firstFamilies.get(firstFamilies.size() - 1).equals(secondFamilies.get(secondFamilies.size() - 1));
         }
         return false;
     }
@@ -740,12 +730,12 @@ public class Graph {
 
     @Override
     public String toString() {
-        String str = "";
+        StringBuilder builder = new StringBuilder();
         for (Node node : animator.nodes) {
-            str += node.generation + ": ";
-            str += " | " + node + " | ";
-            str += "\n";
+            builder.append(node.generation).append(": ");
+            builder.append(" | ").append(node).append(" | ");
+            builder.append("\n");
         }
-        return str;
+        return builder.toString();
     }
 }

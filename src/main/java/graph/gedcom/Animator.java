@@ -1,21 +1,8 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.BOND_WIDTH;
-import static graph.gedcom.Util.MARRIAGE_INNER_WIDTH;
-import static graph.gedcom.Util.MARRIAGE_WIDTH;
-import static graph.gedcom.Util.MINI_BOND_WIDTH;
-import static graph.gedcom.Util.PROGENY_DISTANCE;
-import static graph.gedcom.Util.VERTICAL_SPACE_CALC;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
-import graph.gedcom.Util.Match;
-import graph.gedcom.Util.Side;
+import static graph.gedcom.Util.*;
 
 /**
  * Sets the vertical and horizontal position of nodes and lines.
@@ -92,11 +79,10 @@ public class Animator {
                 // Bond sizes
                 Bond bond = familyNode.bond;
                 if (bond != null) {
-                    float bondWidth = familyNode.mini ? MINI_BOND_WIDTH : bond.marriageDate != null ? MARRIAGE_WIDTH : BOND_WIDTH;
-                    bond.width = bondWidth;
+                    bond.width = familyNode.mini ? MINI_BOND_WIDTH : bond.marriageDate != null ? MARRIAGE_WIDTH : BOND_WIDTH;
                     bond.height = familyNode.height;
                     if (bond.marriageDate != null) {
-                        bond.overlap = (MARRIAGE_WIDTH - MARRIAGE_INNER_WIDTH) / 2;
+                        bond.overlap = (MARRIAGE_WIDTH - MARRIAGE_INNER_WIDTH) / 2F;
                         if (familyNode.side == Side.LEFT || familyNode.side == Side.RIGHT)
                             familyNode.width += bond.overlap;
                     }
@@ -125,7 +111,7 @@ public class Animator {
             group.setOrigin();
         }
 
-        // Orrible hack in case little numbers are not displayed: removes mini origins that have one child only
+        // Horrible hack in case little numbers are not displayed: removes mini origins that have one child only
         if (!withNumbers) {
             for (PersonNode personNode : personNodes) {
                 Node origin = personNode.origin;
@@ -195,7 +181,8 @@ public class Animator {
                 UnionRow row = unionRows.get(group.generation + maxAbove);
                 Union union = null;
                 boolean joinExistingGroup = false;
-                find: for (Node node : group.list) {
+                find:
+                for (Node node : group.list) {
                     if (node.isAncestor) {
                         // Search an existing union to join
                         for (Union un : row) {
@@ -217,14 +204,14 @@ public class Animator {
                 if (joinExistingGroup) { // Already populated union
                     for (Node node : group.list) {
                         if (!node.equals(union.ancestor)) { // Avoid duplicated ancestor node
-                            union.list.add(node); // Add always at the end because groups are well ordered
+                            union.list.add(node); // Adds always at the end because groups are well-ordered
                         }
                     }
                 } else { // Empty union
                     union.list.addAll(group.list);
                     row.addUnion(union);
                 }
-                for (Node node : union.list) { // TODO A ben guardare cicla 2 volte in metà della stessa union
+                for (Node node : union.list) { // TODO: actually it cycles 2 times in half of the same union
                     node.union = union;
                     // Exceptionally also fulcrum family/person node will be putted in union.ancestor
                     PersonNode main = node.getMainPersonNode();
@@ -292,22 +279,18 @@ public class Animator {
 
         // Better first arrange the fulcrum group
         fulcrumGroup.placeNodes(0);
-
-        // Ascends generations disposing ancestors and uncles, starting from from fulcrum generation up
+        // Ascends generations disposing ancestors and uncles, starting from fulcrum generation up
         for (int r = maxAbove; r >= 0; r--) {
             groupRows.get(r).placeAncestors();
         }
-
         // Positions the descendants starting from generation -1 (if existing) or from fulcrum generation down
         for (int r = Math.max(0, maxAbove - 1); r < unionRows.size(); r++) {
             unionRows.get(r).placeYouths();
         }
-
         // Separates couples of overlapping ancestors
         for (int r = maxAbove - 1; r >= 0; r--) {
             unionRows.get(r).placeOriginsAscending();
         }
-
         // Outdistances ancestor unions and descendants nodes optimizing horizontal position
         int count = 100;
         float forces = Float.MAX_VALUE;
@@ -318,7 +301,7 @@ public class Animator {
             for (int r = maxAbove - 1; r >= 0; r--) {
                 unionRows.get(r).outdistanceAncestorColumns();
             }
-            // Aligns each ancestor between origins
+            // Aligns each ancestor union between their origins
             for (int r = maxAbove - 2; r >= 0; r--) {
                 for (Union union : unionRows.get(r)) {
                     union.setX(union.x + union.alignBetweenOrigins());
@@ -333,18 +316,15 @@ public class Animator {
             }
             count--;
         }
-
         // Just in case removes final overlaps in all rows
         for (UnionRow unionRow : unionRows) {
             unionRow.resolveOverlap();
         }
-
         // Fixes horizontal misalignment between parents (generation -1) and grandparents (generation -2)
         if (maxAbove > 0) {
             Union parentUnion = unionRows.get(maxAbove - 1).get(0);
             parentUnion.moveDescending(parentUnion.alignBetweenOrigins());
         }
-
         // Eventually places horizontally mini ancestry and mini progeny
         for (Node node : nodes) {
             node.alignMiniEmptyOverYouth();
@@ -406,12 +386,7 @@ public class Animator {
             line.update();
 
         // Order lines from left to right
-        Collections.sort(lines, new Comparator<Line>() {
-            @Override
-            public int compare(Line line1, Line line2) {
-                return line1.compareTo(line2);
-            }
-        });
+        Collections.sort(lines, Line::compareTo);
 
         // Clear lineRows
         for (LineRow row : lineRows) {
@@ -426,9 +401,9 @@ public class Animator {
             }
             LineRow row = lineRows.get(rowNum);
             float lineLeft = Math.min(line.x1, line.x2);
-            if (row.size() == 0 || lineLeft > row.restartX + maxBitmapSize) {
+            if (row.isEmpty() || lineLeft > row.restartX + maxBitmapSize) {
                 row.restartX = lineLeft;
-                row.add(new HashSet<Line>());
+                row.add(new HashSet<>());
             }
             row.get(row.size() - 1).add(line);
             // Store the wider path size
@@ -441,14 +416,14 @@ public class Animator {
         lineGroups.clear();
         for (LineRow row : lineRows) {
             for (Set<Line> group : row) {
-                if (group.size() > 0)
+                if (!group.isEmpty())
                     lineGroups.add(group);
             }
         }
     }
 
     // One row of the 2D array 'lineRows'
-    class LineRow extends ArrayList<Set<Line>> {
+    static class LineRow extends ArrayList<Set<Line>> {
         float restartX; // (re)starting point of every group of lines inside this row
 
         void reset() {
@@ -460,14 +435,14 @@ public class Animator {
 
     @Override
     public String toString() {
-        String txt = "";
+        StringBuilder builder = new StringBuilder();
         for (Group group : groups) {
-            txt += group.generation + ": ";
-            txt += group + "\n";
+            builder.append(group.generation).append(": ");
+            builder.append(group).append("\n");
         }
-        txt += "- - - - - - - - - - -\n";
+        builder.append("- - - - - - - - - - -\n");
         for (UnionRow row : unionRows)
-            txt += row + "\n";
-        return txt;
+            builder.append(row).append("\n");
+        return builder.toString();
     }
 }

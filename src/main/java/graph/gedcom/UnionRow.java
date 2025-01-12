@@ -1,10 +1,10 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.HORIZONTAL_SPACE;
-import static graph.gedcom.Util.UNION_DISTANCE;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import static graph.gedcom.Util.HORIZONTAL_SPACE;
+import static graph.gedcom.Util.UNION_DISTANCE;
 
 /**
  * List of unions of the same generation, ordered left to right.
@@ -98,10 +98,8 @@ public class UnionRow extends ArrayList<Union> {
 
     @Override
     public String toString() {
-        String txt = generation + ": <";
-        for (Union union : this)
-            txt += union + ", ";
-        txt = txt.replaceAll(", $", ">");
-        return txt;
+        StringBuilder builder = new StringBuilder(generation + ": <");
+        for (Union union : this) builder.append(union).append(", ");
+        return builder.toString().replaceAll(", $", ">");
     }
 }

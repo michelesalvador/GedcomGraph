@@ -4,7 +4,7 @@ import graph.gedcom.Util.Match;
 import graph.gedcom.Util.Side;
 
 /**
- * Horizontal continous or dashed line to connect following multiple partners.
+ * Horizontal continuous or dashed line to connect following multiple partners.
  */
 public class BackLine extends Line {
 

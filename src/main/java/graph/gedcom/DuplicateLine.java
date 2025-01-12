@@ -7,8 +7,8 @@ import graph.gedcom.Util.Gender;
  */
 public class DuplicateLine extends Line {
 
-    private PersonNode firstNode;
-    private PersonNode secondNode;
+    private final PersonNode firstNode;
+    private final PersonNode secondNode;
     public Gender gender;
     public float x3, y3;
 
@@ -39,7 +39,7 @@ public class DuplicateLine extends Line {
                 if (secondNode.x > firstNode.x + firstNode.width) { // Line between corners
                     x1 = firstNode.x + firstNode.width - shift;
                     x2 = secondNode.x + shift;
-                } else { // Almost horizontaly aligned
+                } else { // Almost horizontally aligned
                     x1 = firstNode.x + firstNode.width / 4 * 3;
                     x2 = secondNode.x + secondNode.width / 4;
                 }

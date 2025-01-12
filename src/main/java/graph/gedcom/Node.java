@@ -1,17 +1,11 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.ANCESTRY_DISTANCE;
-import static graph.gedcom.Util.HORIZONTAL_SPACE;
-import static graph.gedcom.Util.PROGENY_PLAY;
-import static graph.gedcom.Util.UNION_DISTANCE;
+import org.folg.gedcom.model.Family;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.folg.gedcom.model.Family;
-
-import graph.gedcom.Util.Branch;
-import graph.gedcom.Util.Match;
+import static graph.gedcom.Util.*;
 
 /**
  * Abstract class to be extended in a PersonNode or FamilyNode.
@@ -27,7 +21,7 @@ public abstract class Node extends Metric {
     public boolean mini; // The PersonNode will be displayed little (with just a number), and the familyNode without marriage date
     boolean isAncestor;
     boolean marriedSiblings; // Especially for FamilyNode, the two partners are also siblings
-    Union union; // The union this node belongs to (expecially for ancestors)
+    Union union; // The union this node belongs to (especially for ancestors)
     Node prev, next; // Previous and next node on the same row (same generation)
     Match match; // Position of this node inside possible marriages
     List<Node> origins; // Ordered chain of origins up until generation -1
@@ -150,7 +144,7 @@ public abstract class Node extends Metric {
     // Returns the first partner not acquired [or the first one available]
     abstract PersonNode getMainPersonNode();
 
-    // Softly returns the "husband" (the first parner)
+    // Softly returns the "husband" (the first partner)
     abstract PersonNode getHusband();
 
     // Softly returns the "wife" (the second partner) or the first person node available

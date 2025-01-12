@@ -1,15 +1,11 @@
 package graph.gedcom;
 
-import static graph.gedcom.Util.ANCESTRY_DISTANCE;
-import static graph.gedcom.Util.HORIZONTAL_SPACE;
-import static graph.gedcom.Util.LITTLE_GROUP_DISTANCE_CALC;
+import org.folg.gedcom.model.Person;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.folg.gedcom.model.Person;
-
-import graph.gedcom.Util.Branch;
+import static graph.gedcom.Util.*;
 
 /**
  * List of person nodes: used to store children of an origin with their spouses.
@@ -18,8 +14,8 @@ public class Group extends Metric {
 
     List<Node> list; // List of PersonNodes and FamilyNodes of siblings and brothers-in-law, children of the origin
     Node origin; // Is the same origin of the Person or Family nodes of the list
-    PersonNode first; // First not-aquired personNode of the group
-    PersonNode last; // Last not-aquired personNode of the group, may coincide with first
+    PersonNode first; // First not-acquired personNode of the group
+    PersonNode last; // Last not-acquired personNode of the group, may coincide with first
     int generation;
     boolean mini;
     Branch branch;
@@ -31,7 +27,7 @@ public class Group extends Metric {
         this.branch = branch;
     }
 
-    // Adds a node to this group and vice-versa
+    // Adds a node to this group and vice versa
     void addNode(Node node) {
         addNode(node, -1);
     }
@@ -72,10 +68,11 @@ public class Group extends Metric {
 
         // Populates first and last person node
         if (!mini) {
-            outer: for (Node node : list) {
+            outer:
+            for (Node node : list) {
                 if (node.isAncestor && branch == Branch.MATER && !node.marriedSiblings) {
                     first = node.getWife();
-                    break outer;
+                    break;
                 } else {
                     for (PersonNode personNode : node.getPersonNodes()) {
                         if (!personNode.acquired) {
@@ -85,11 +82,12 @@ public class Group extends Metric {
                     }
                 }
             }
-            outer: for (int i = list.size() - 1; i >= 0; i--) {
+            outer:
+            for (int i = list.size() - 1; i >= 0; i--) {
                 Node node = list.get(i);
                 if (node.isAncestor && branch == Branch.PATER && !node.marriedSiblings) {
                     last = node.getHusband();
-                    break outer;
+                    break;
                 } else {
                     List<PersonNode> personNodes = node.getPersonNodes();
                     for (int j = personNodes.size() - 1; j >= 0; j--) {
@@ -104,7 +102,9 @@ public class Group extends Metric {
         }
     }
 
-    // Checks if origin is mini or without partners
+    /**
+     * Checks if origin is mini or without partners.
+     */
     boolean isOriginMiniOrEmpty() {
         if (origin != null) {
             if (origin.isMultiMarriage())
@@ -139,7 +139,7 @@ public class Group extends Metric {
     }
 
     /**
-     * Places horizontaly origin and uncles above this group.
+     * Places horizontally origin and uncles above this group.
      */
     public void placeAncestors() {
         if (origin != null) {
@@ -179,11 +179,11 @@ public class Group extends Metric {
     }
 
     void moveDescending(float shift) {
-        updateX();
-        setX(x + shift);
-        for (Node node : list) {
-            if (node.youth != null) {
-                node.youth.moveDescending(shift);
+        if (!mini) {
+            updateX();
+            setX(x + shift);
+            for (Node node : list) {
+                if (node.youth != null) node.youth.moveDescending(shift);
             }
         }
     }
@@ -233,7 +233,6 @@ public class Group extends Metric {
     private float getBasicLeftWidth() {
         float width = 0;
         for (Node node : list) {
-            // if (node.match == Match.MAIN) { // TODO verifica in albero con multimariagges tra fratelli senza zii
             if (node.getPersonNodes().contains(first)) {
                 width += node.getLeftWidth(branch);
                 break;
@@ -249,7 +248,7 @@ public class Group extends Metric {
      */
     private float getBasicCentralWidth() {
         float width = 0;
-        if (!first.equals(last)) {
+        if (first != null && !first.equals(last)) {
             Node start = first.getFamilyNode();
             Node end = last.getFamilyNode();
             for (int i = list.indexOf(start); i < list.indexOf(end); i++) {
@@ -270,10 +269,10 @@ public class Group extends Metric {
     @Override
     public String toString() {
         String txt = "";
-        // txt += generation + ": ";
+        //txt += generation + ": ";
         txt += list;
-        // txt += " " + branch;
-        // txt += " " + hashCode();
+        //txt += " " + branch;
+        //txt += " " + hashCode();
         return txt;
     }
 }
