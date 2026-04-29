@@ -165,7 +165,6 @@ public class Union extends Metric {
         } else if (!origins.isEmpty()) {
             Node origin = origins.get(0);
             if (origin.union != null) {
-                updateX();
                 origin.youth.updateX();
                 return origin.centerX() - origin.youth.centerX();
             }
