@@ -194,7 +194,7 @@ public class Union extends Metric {
                 Node left = youths.get(i).origin;
                 Node right = youths.get(i + 1).origin;
                 node = left.next;
-                while (!node.equals(right)) {
+                while (node != null && !node.equals(right)) {
                     float space = node.next.x - node.prev.x - node.prev.width - node.width;
                     node.setX(node.prev.x + node.prev.width + space / 2);
                     node = node.next;
